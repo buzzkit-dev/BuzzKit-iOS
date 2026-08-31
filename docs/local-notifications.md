@@ -17,6 +17,12 @@ Nothing to implement. The SDK:
    cancelled centrally. A cancel id matches exactly or as a prefix, so one
    `{ "cancel": { "id": "<runId>" } }` removes every notification that run scheduled.
 
+Silent pushes come with platform limits: iOS budgets them per hour, defers them in
+Low Power Mode, and never delivers them to a force-quit app. The schedule is sent when
+the workflow's wait begins rather than at fire time, so the carrier has the whole
+window to land; an app that stays force-quit for the entire window will not schedule
+the notification.
+
 Requirements: the app must have been launched once so the SDK is configured, and
 background remote notifications must be enabled (the `remote-notification` background
 mode). Scheduled notifications carry the originating message id, so opens are tracked
