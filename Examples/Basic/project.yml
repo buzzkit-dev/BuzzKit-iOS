@@ -1,0 +1,29 @@
+name: Basic
+options:
+  bundleIdPrefix: com.buzzkit
+  deploymentTarget:
+    iOS: "16.0"
+packages:
+  BuzzKit:
+    path: ../..
+targets:
+  Basic:
+    type: application
+    platform: iOS
+    sources: [App]
+    dependencies:
+      - package: BuzzKit
+        product: BuzzKit
+      - package: BuzzKit
+        product: BuzzKitUI
+    info:
+      path: App/Info.plist
+      properties:
+        UILaunchScreen: {}
+        UIBackgroundModes: [remote-notification]
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.buzzkit.examples.basic
+        TARGETED_DEVICE_FAMILY: "1"

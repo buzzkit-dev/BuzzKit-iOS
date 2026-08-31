@@ -35,21 +35,40 @@ final class DeepLinkCenter: Sendable {
     }
 
     func dispatch(payload: PushPayload, from sdk: BuzzKit) {
+        dispatch(
+            payload: payload,
+            delegateRoute: { url in
+                sdk.delegateValue?.buzzKit(sdk, openDeepLink: url) ?? false
+            },
+            track: { name, data in
+                Task { await sdk.tracker.trackSystem(name, data: data) }
+            }
+        )
+    }
+
+    func dispatch(
+        payload: PushPayload,
+        delegateRoute: (URL) -> Bool,
+        track: (String, [String: JSONValue]) -> Void
+    ) {
         if let action = payload.action {
-            let handled = actions.handler(for: action.name) != nil
-            if let handler = actions.handler(for: action.name) {
+            let handler = actions.handler(for: action.name)
+            if let handler {
                 logger.debug("Running action '\(action.name)'")
                 handler(action)
             } else {
                 logger.warn("No handler registered for action '\(action.name)'")
             }
-            var actionData: [String: JSONValue] = ["name": .string(action.name), "handled": .bool(handled)]
+            var actionData: [String: JSONValue] = [
+                "name": .string(action.name),
+                "handled": .bool(handler != nil),
+            ]
             actionData.merge(messageData(payload)) { current, _ in current }
-            track(sdk, EventNames.actionTriggered, actionData)
+            track(EventNames.actionTriggered, actionData)
         }
         guard let url = payload.deepLink else { return }
         let via: String
-        if let delegate = sdk.delegateValue, delegate.buzzKit(sdk, openDeepLink: url) {
+        if delegateRoute(url) {
             via = "delegate"
         } else if let handler = onDeepLink.read() {
             logger.debug("Routing deep link \(url.absoluteString)")
@@ -61,17 +80,11 @@ final class DeepLinkCenter: Sendable {
         }
         var linkData: [String: JSONValue] = ["url": .string(url.absoluteString), "via": .string(via)]
         linkData.merge(messageData(payload)) { current, _ in current }
-        track(sdk, EventNames.deeplinkOpened, linkData)
+        track(EventNames.deeplinkOpened, linkData)
     }
 
     private func messageData(_ payload: PushPayload) -> [String: JSONValue] {
         payload.messageId.map { ["messageId": .string($0)] } ?? [:]
-    }
-
-    private func track(_ sdk: BuzzKit, _ name: String, _ data: [String: JSONValue]) {
-        Task {
-            await sdk.tracker.trackSystem(name, data: data)
-        }
     }
 
     private func openWithSystem(_ url: URL) {

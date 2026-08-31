@@ -1,0 +1,5 @@
+{
+  "Simulator Target Bundle": "dev.buzzkit.examples.basic",
+  "aps": { "content-available": 1 },
+  "bk": { "cancel": { "id": "run_demo" } }
+}

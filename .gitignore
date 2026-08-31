@@ -9,3 +9,5 @@ DerivedData/
 build/
 .build/
 !Examples/**/*.xcodeproj
+*.profraw
+*.profdata

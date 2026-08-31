@@ -1,0 +1,11 @@
+{
+  "Simulator Target Bundle": "dev.buzzkit.examples.basic",
+  "aps": { "alert": { "title": "Price drop", "body": "Your saved part is 20% off." }, "sound": "default", "mutable-content": 1 },
+  "bk": {
+    "messageId": "msg_sample1",
+    "deepLink": "buzzkit://offers/42",
+    "action": { "name": "show_offer", "data": { "offerId": "off_9" } },
+    "image": "https://picsum.photos/400"
+  },
+  "plan": "pro"
+}

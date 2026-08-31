@@ -1,0 +1,15 @@
+{
+  "Simulator Target Bundle": "dev.buzzkit.examples.basic",
+  "aps": { "content-available": 1 },
+  "bk": {
+    "messageId": "msg_sample2",
+    "local": {
+      "id": "run_demo:remind",
+      "at": "2026-09-01T19:00:00",
+      "cancelOn": ["workout.completed"],
+      "title": "Streak at risk",
+      "body": "Work out before midnight to keep your 7 day streak.",
+      "data": { "kind": "streak" }
+    }
+  }
+}
