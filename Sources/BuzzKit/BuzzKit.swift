@@ -370,6 +370,12 @@ public final class BuzzKit: @unchecked Sendable {
         #if canImport(UserNotifications)
         if let plan = payload.localPlan {
             await localScheduler.schedule(plan, messageId: payload.messageId)
+            var data: [String: JSONValue] = ["localId": .string(plan.id)]
+            if let messageId = payload.messageId {
+                data["messageId"] = .string(messageId)
+            }
+            await tracker.trackSystem(EventNames.localScheduled, data: data)
+            await eventQueue.flush()
             return .newData
         }
         if let cancel = payload.cancelPlan {

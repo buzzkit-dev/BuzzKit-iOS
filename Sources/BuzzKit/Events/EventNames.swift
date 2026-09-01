@@ -9,6 +9,7 @@ enum EventNames {
     static let notificationDelivered = "$notification.delivered"
     static let notificationOpened = "$notification.opened"
     static let notificationDismissed = "$notification.dismissed"
+    static let localScheduled = "$local.scheduled"
     static let activityStarted = "$activity.started"
     static let activityEnded = "$activity.ended"
     static let activityDismissed = "$activity.dismissed"
@@ -22,6 +23,7 @@ enum EventNames {
         appInstalled, appUpdated,
         appOpened, appBackgrounded, sessionEnded,
         notificationDelivered, notificationOpened, notificationDismissed,
+        localScheduled,
         activityStarted, activityEnded, activityDismissed, activityStale,
         deeplinkOpened, actionTriggered,
         permissionChanged, identify,

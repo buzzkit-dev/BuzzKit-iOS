@@ -16,12 +16,16 @@ Nothing to implement. The SDK:
 3. Handles the cancel push (`bk.cancel`) the server sends when a workflow run is
    cancelled centrally. A cancel id matches exactly or as a prefix, so one
    `{ "cancel": { "id": "<runId>" } }` removes every notification that run scheduled.
+4. Acknowledges the schedule with a `$local.scheduled` event carrying the plan id.
+   If the run reaches the fire time without an acknowledgment — the silent push never
+   landed, the app stayed force-quit — the server sends the message as a normal push
+   instead, so the notification arrives either way.
 
 Silent pushes come with platform limits: iOS budgets them per hour, defers them in
 Low Power Mode, and never delivers them to a force-quit app. The schedule is sent when
 the workflow's wait begins rather than at fire time, so the carrier has the whole
 window to land; an app that stays force-quit for the entire window will not schedule
-the notification.
+the notification, and the server's fallback push covers exactly that case.
 
 Requirements: the app must have been launched once so the SDK is configured, and
 background remote notifications must be enabled (the `remote-notification` background
