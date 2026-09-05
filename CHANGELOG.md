@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 1.0.0 (2026-09-05)
+
 Initial release of the BuzzKit iOS SDK.
 
 - `BuzzKit.configure` with one-line and full-`Configuration` forms
