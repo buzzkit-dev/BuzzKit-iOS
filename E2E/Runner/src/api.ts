@@ -90,10 +90,9 @@ export class Api {
   }
 
   runs(externalId: string) {
-    return this.call<{ items: { id: string; status: string; step: string | null }[] }>(
-      'GET',
-      `/v1/subscribers/${encodeURIComponent(externalId)}/runs`
-    );
+    return this.call<{
+      items: { id: string; status: string; step: string | null; startedAt: string; updatedAt: string }[];
+    }>('GET', `/v1/subscribers/${encodeURIComponent(externalId)}/runs`);
   }
 
   run(id: string) {
@@ -117,6 +116,21 @@ export class Api {
 
   removeTopic(slug: string) {
     return this.call<unknown>('DELETE', `/v1/topics/${slug}`);
+  }
+
+  workflow(slug: string) {
+    return this.call<{ slug: string; status: string; createdAt: string; spec: Record<string, unknown> }>(
+      'GET',
+      `/v1/workflows/${slug}`
+    );
+  }
+
+  upsertSubscriber(externalId: string, body: Record<string, unknown>) {
+    return this.call<{ externalId: string }>('PUT', `/v1/subscribers/${encodeURIComponent(externalId)}`, body);
+  }
+
+  createSegment(slug: string, name: string, expression: Record<string, unknown>) {
+    return this.call<{ slug: string }>('POST', '/v1/segments', { slug, name, expression });
   }
 
   async waitForEvent(
