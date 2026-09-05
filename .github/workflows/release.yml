@@ -1,0 +1,94 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  stamp:
+    name: Stamp the version
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      TAG: ${{ github.event.release.tag_name }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Read the version from the tag
+        id: version
+        run: |
+          version="${TAG#v}"
+          if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+([-+][0-9A-Za-z.-]+)?$ ]]; then
+            echo "Release tag '$TAG' is not a semantic version such as v1.2.3" >&2
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Write the version into the SDK, the README and the changelog
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          sed -i -E "s/static let version = \"[^\"]+\"/static let version = \"$VERSION\"/" Sources/BuzzKit/Networking/HTTPClient.swift
+          sed -i -E "s|(buzzkit-dev/buzzkit-ios\", from: \")[^\"]+|\1$VERSION|" README.md
+          python3 - <<'EOF'
+          import datetime
+          import os
+          import pathlib
+
+          version = os.environ["VERSION"]
+          path = pathlib.Path("CHANGELOG.md")
+          text = path.read_text()
+          heading = f"## {version} ({datetime.date.today().isoformat()})"
+          if f"## {version}" in text:
+              pass
+          elif "## Unreleased" in text:
+              text = text.replace("## Unreleased", f"## Unreleased\n\n{heading}", 1)
+          else:
+              text = text.replace("# Changelog\n", f"# Changelog\n\n## Unreleased\n\n{heading}\n", 1)
+          path.write_text(text)
+          EOF
+          git diff --stat
+
+      - name: Commit to main and move the tag onto the commit
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if [ -n "$(git status --porcelain)" ]; then
+            git add -A
+            git commit -m "chore: release $VERSION"
+            git push origin HEAD:main
+          fi
+          git tag -f "$TAG"
+          git push -f origin "refs/tags/$TAG"
+
+      - name: Fill empty release notes from the changelog
+        if: github.event.release.body == ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          python3 - <<'EOF'
+          import os
+          import pathlib
+          import re
+
+          version = os.environ["VERSION"]
+          text = pathlib.Path("CHANGELOG.md").read_text()
+          match = re.search(rf"^## {re.escape(version)}[^\n]*\n(.*?)(?=^## |\Z)", text, re.M | re.S)
+          pathlib.Path("release-notes.md").write_text(match.group(1).strip() + "\n" if match else "")
+          EOF
+          if [ -s release-notes.md ]; then
+            gh release edit "$TAG" --notes-file release-notes.md
+          fi

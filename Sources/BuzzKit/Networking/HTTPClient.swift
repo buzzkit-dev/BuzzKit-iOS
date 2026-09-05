@@ -164,7 +164,7 @@ enum ISO8601 {
 }
 
 enum SDKInfo {
-    static let version = "0.1.0"
+    static let version = "1.0.0"
     static var userAgent: String {
         "buzzkit-ios/\(version)"
     }
