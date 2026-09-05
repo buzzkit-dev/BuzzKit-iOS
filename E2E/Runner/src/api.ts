@@ -63,7 +63,7 @@ export class Api {
   }
 
   subscriber(externalId: string) {
-    return this.call<{ externalId: string; attributes: Record<string, unknown> }>(
+    return this.call<{ externalId: string; verified: boolean; attributes: Record<string, unknown> }>(
       'GET',
       `/v1/subscribers/${encodeURIComponent(externalId)}`
     );

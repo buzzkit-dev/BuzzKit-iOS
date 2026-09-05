@@ -37,7 +37,8 @@ enum CommandChannel {
     private static func perform(id: String, name: String, arguments: [String: Any]) async {
         switch name {
         case "identify":
-            BuzzKit.identify(arguments["externalId"] as? String ?? "")
+            BuzzKit.identify(arguments["externalId"] as? String ?? "", identityHash: arguments["identityHash"] as? String)
+            await settleEvents()
             Reporter.send("command.done", ["id": id, "name": name])
         case "logout":
             BuzzKit.logout()

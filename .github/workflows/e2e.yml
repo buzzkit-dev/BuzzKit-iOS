@@ -65,6 +65,7 @@ jobs:
         env:
           BUZZKIT_WORKSPACE_KEY: ${{ secrets.BUZZKIT_WORKSPACE_KEY }}
           BUZZKIT_CLIENT_KEY: ${{ secrets.BUZZKIT_CLIENT_KEY }}
+          BUZZKIT_IDENTITY_SECRET: ${{ secrets.BUZZKIT_IDENTITY_SECRET }}
         run: bunx vitest run --reporter=default --reporter=junit --outputFile=results.xml
 
       - name: Explain a push failure from the simulator's own logs

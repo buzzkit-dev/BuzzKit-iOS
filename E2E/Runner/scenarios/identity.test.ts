@@ -1,3 +1,4 @@
+import { createHmac } from 'node:crypto';
 import { afterAll, beforeAll, expect, it } from 'vitest';
 import { type Harness, startHarness } from '../src/harness';
 
@@ -51,7 +52,7 @@ it('backgrounding and returning later records the session on the identified subs
   const { api, collector, run, subscriber } = harness;
   try {
     await harness.background();
-    await new Promise((resolve) => setTimeout(resolve, 32_000));
+    await new Promise((resolve) => setTimeout(resolve, 45_000));
   } finally {
     await harness.foreground();
   }
@@ -61,6 +62,36 @@ it('backgrounding and returning later records the session on the identified subs
   const ended = await api.waitForEvent(subscriber, '$session.ended');
   expect(Number(ended.data?.durationSec ?? 0)).toBeGreaterThan(0);
   await api.waitForEvent(subscriber, '$app.opened');
+});
+
+function identityHash(externalId: string): string {
+  return createHmac('sha256', harness.config.identitySecret ?? '').update(externalId).digest('hex');
+}
+
+it.skipIf(!process.env.BUZZKIT_IDENTITY_SECRET)('a correct identity hash marks the subscriber verified', async () => {
+  const { api, collector, run, subscriber } = harness;
+  expect((await api.subscriber(subscriber)).verified).toBe(false);
+
+  await collector.command(run, 'identify', { externalId: subscriber, identityHash: identityHash(subscriber) });
+
+  const deadline = Date.now() + 30_000;
+  let verified = false;
+  while (Date.now() < deadline && !verified) {
+    verified = (await api.subscriber(subscriber)).verified;
+    if (!verified) await new Promise((resolve) => setTimeout(resolve, 1_000));
+  }
+  expect(verified).toBe(true);
+});
+
+it.skipIf(!process.env.BUZZKIT_IDENTITY_SECRET)('a wrong identity hash is refused and creates nothing', async () => {
+  const { api, collector, run, subscriber } = harness;
+  const impostor = `${subscriber}-impostor`;
+
+  await collector.command(run, 'identify', { externalId: impostor, identityHash: identityHash('someone-else') });
+  await new Promise((resolve) => setTimeout(resolve, 5_000));
+  await expect(api.subscriber(impostor)).rejects.toThrow(/404/);
+
+  await collector.command(run, 'identify', { externalId: subscriber, identityHash: identityHash(subscriber) });
 });
 
 it('stops delivering to the device after logout', async () => {

@@ -26,6 +26,7 @@ lock screen and Focus presentation. Those stay a manual pass on a physical devic
 | `BUZZKIT_WORKSPACE_KEY` | Workspace key (`bk_ws_`) with `messages:send` and `subscribers:write` |
 | `BUZZKIT_CLIENT_KEY` | Client key (`bk_pk_`) the harness app connects with |
 | `BUZZKIT_TENANT` | Defaults to `default` |
+| `BUZZKIT_IDENTITY_SECRET` | The tenant's identity secret (dashboard → tenant → identity secret). Optional: without it the two identity-verification scenarios skip |
 | `BUZZKIT_API_URL` | Defaults to `https://api.buzzkit.dev` |
 | `E2E_SIMULATOR` | Defaults to `iPhone 17` |
 | `E2E_COLLECTOR_PORT` | Defaults to `8911` |
@@ -85,7 +86,7 @@ needs a token with Actions write on this repository.
 | --- | --- |
 | `push.test.ts` | Real APNs delivery, settled deliveries, delivered receipts, deep links and action buttons in the payload, a rich push getting its image attached by the service extension with subtitle and badge intact |
 | `interaction.test.ts` | Opening a notification (`didOpen`, deep link routing, `$notification.opened`, `$deeplink.opened`), action buttons with their identifier, text input actions, defined actions running their handler (`$action.triggered`) and recorded as unhandled when none is registered, the `onDeepLink` handler route when the delegate declines, dismissal |
-| `identity.test.ts` | Subscription registration, identify and permission events, `setAttributes`, custom events from the device, backgrounding and returning recording `$app.backgrounded`, `$session.ended` and `$app.opened`, logout disabling delivery |
+| `identity.test.ts` | Subscription registration, identify and permission events, `setAttributes`, identity verification (a correct HMAC marks the subscriber verified, a wrong one is refused), custom events from the device, backgrounding and returning recording `$app.backgrounded`, `$session.ended` and `$app.opened`, logout disabling delivery |
 | `preferences.test.ts` | Reading workspace topics on device, opting out and back in (`$preferences.updated`), a single channel opted out and in, and topic targeting honouring the opt-out |
 | `local-notifications.test.ts` | A published workflow whose `waitUntil` + `deliver: local` send starts a run, builds the plan and gets its silent push accepted by APNs; the device then schedules that exact plan (`$local.scheduled`, the pending request with its title and body), a cancel push for the run removes it, and the `cancelOn` event removes it locally while canceling the run on the server |
 | `live-activities.test.ts` | A real Live Activity started on device, its token registered, updated and ended through APNs, dismissed both by an end push carrying a dismissal date and locally with an immediate policy, marked stale by a stale date, and one started remotely through a push-to-start token |
