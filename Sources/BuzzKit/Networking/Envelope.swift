@@ -6,6 +6,12 @@ struct Envelope<Value: Decodable & Sendable>: Decodable, Sendable {
     let error: APIProblem?
 }
 
+/// List endpoints answer with `data: { items, hasMore, nextCursor }`, never a bare
+/// array, so a list call decodes through this rather than the element type directly.
+struct ListPayload<Element: Decodable & Sendable>: Decodable, Sendable {
+    let items: [Element]
+}
+
 struct APIProblem: Decodable, Sendable {
     let code: String
     let message: String

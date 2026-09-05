@@ -1,0 +1,88 @@
+name: E2E
+options:
+  bundleIdPrefix: dev.buzzkit
+  deploymentTarget:
+    iOS: "17.0"
+packages:
+  BuzzKit:
+    path: ..
+targets:
+  E2E:
+    type: application
+    platform: iOS
+    sources: [App, Shared]
+    dependencies:
+      - package: BuzzKit
+        product: BuzzKit
+      - target: E2EService
+        embed: true
+      - target: E2EWidget
+        embed: true
+    info:
+      path: App/Info.plist
+      properties:
+        UILaunchScreen: {}
+        UIBackgroundModes: [remote-notification]
+        NSSupportsLiveActivities: true
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+          NSAllowsArbitraryLoads: true
+    entitlements:
+      path: App/E2E.entitlements
+      properties:
+        aps-environment: development
+        com.apple.security.application-groups: [group.dev.buzzkit.e2e]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.buzzkit.e2e
+        TARGETED_DEVICE_FAMILY: "1"
+        CODE_SIGN_IDENTITY: "-"
+        CODE_SIGN_STYLE: Manual
+        CODE_SIGNING_ALLOWED: YES
+        CODE_SIGNING_REQUIRED: YES
+  E2EWidget:
+    type: app-extension
+    platform: iOS
+    sources: [Widget, Shared]
+    info:
+      path: Widget/Info.plist
+      properties:
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    entitlements:
+      path: Widget/E2EWidget.entitlements
+      properties:
+        com.apple.security.application-groups: [group.dev.buzzkit.e2e]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.buzzkit.e2e.widget
+        TARGETED_DEVICE_FAMILY: "1"
+        CODE_SIGN_IDENTITY: "-"
+        CODE_SIGN_STYLE: Manual
+        CODE_SIGNING_ALLOWED: YES
+        CODE_SIGNING_REQUIRED: YES
+  E2EService:
+    type: app-extension
+    platform: iOS
+    sources: [Extension]
+    dependencies:
+      - package: BuzzKit
+        product: BuzzKitNotificationServiceExtension
+    info:
+      path: Extension/Info.plist
+      properties:
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.usernotifications.service
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).NotificationService
+    entitlements:
+      path: Extension/E2EService.entitlements
+      properties:
+        com.apple.security.application-groups: [group.dev.buzzkit.e2e]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.buzzkit.e2e.service
+        TARGETED_DEVICE_FAMILY: "1"
+        CODE_SIGN_IDENTITY: "-"
+        CODE_SIGN_STYLE: Manual
+        CODE_SIGNING_ALLOWED: YES
+        CODE_SIGNING_REQUIRED: YES

@@ -115,7 +115,7 @@ import Testing
         mock.stub { request in
             let path = request.url?.path ?? ""
             if path.contains("preferences") || path.contains("events") {
-                return jsonResponse(200, #"{"success":true,"data":[]}"#)
+                return jsonResponse(200, #"{"success":true,"data":{"items":[],"hasMore":false,"nextCursor":null}}"#)
             }
             return jsonResponse(200, #"{"success":true,"data":{"id":"act_1","activityId":"a1","attributesType":"T","kind":"activity"}}"#)
         }
@@ -189,11 +189,11 @@ import Testing
                 )!
                 return (response, Data(#"{"success":false,"error":{"code":"rate_limited","message":"slow"}}"#.utf8))
             }
-            return jsonResponse(200, #"{"success":true,"data":[]}"#)
+            return jsonResponse(200, #"{"success":true,"data":{"items":[],"hasMore":false,"nextCursor":null}}"#)
         }
-        let topics = try await mock.client().send(
+        let topics = try await mock.client().sendList(
             HTTPRequest(method: .get, path: "v1/client/preferences", body: nil, headers: [:]),
-            as: [TopicDTO].self
+            of: TopicDTO.self
         )
         #expect(topics.isEmpty)
         #expect(counter.read() == 2)

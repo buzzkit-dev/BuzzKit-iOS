@@ -25,13 +25,23 @@ your real topics with their categories.
 
 ```sh
 xcrun simctl push booted push-samples/message.apns   # rich push: image, deep link, action
-xcrun simctl push booted push-samples/local.apns     # silent push scheduling "Streak at risk" for 19:00
-xcrun simctl push booted push-samples/cancel.apns    # cancel push removing it again
 ```
 
-Or drag a `.apns` file onto the simulator window. After `local.apns`, tapping
-"Track workout.completed" in the app cancels the pending reminder on the device, no
-network involved.
+Or drag the `.apns` file onto the simulator window.
+
+`local.apns` and `cancel.apns` are the silent pushes the server sends to schedule and
+cancel a local notification. A simulator cannot receive those: SpringBoard only supports
+content-available pushes on a device, and `simctl push` refuses a payload with no visible
+content. Feed them to the SDK directly instead, which is exactly what the app delegate
+does for a real silent push:
+
+```swift
+let userInfo = try JSONSerialization.jsonObject(with: Data(contentsOf: url)) as! [AnyHashable: Any]
+await BuzzKit.didReceiveRemoteNotification(userInfo: userInfo)
+```
+
+After `local.apns`, tapping "Track workout.completed" in the app cancels the pending
+reminder on the device, no network involved.
 
 Launching with `-preview-preferences [variant]` opens a preferences demo directly
 (`grouped`, `sheet`, `tinted`, `plain`, `custom-rows`, `custom-screen`), which is how

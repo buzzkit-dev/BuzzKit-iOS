@@ -30,7 +30,7 @@ struct ClientAPI: Sendable {
     }
 
     func trackEvents(_ body: TrackEventsBody) async throws -> [TrackedEventDTO] {
-        try await http.send(request(.post, "v1/client/events", body: body), as: [TrackedEventDTO].self)
+        try await http.sendList(request(.post, "v1/client/events", body: body), of: TrackedEventDTO.self)
     }
 
     func registerLiveActivity(_ body: RegisterLiveActivityBody) async throws -> LiveActivityDTO {
@@ -45,9 +45,9 @@ struct ClientAPI: Sendable {
     }
 
     func preferences(identity: SubscriberIdentity) async throws -> [TopicDTO] {
-        try await http.send(
+        try await http.sendList(
             request(.get, "v1/client/preferences", headers: identity.headers),
-            as: [TopicDTO].self
+            of: TopicDTO.self
         )
     }
 
@@ -55,9 +55,9 @@ struct ClientAPI: Sendable {
         _ changes: [String: PreferenceChange],
         identity: SubscriberIdentity
     ) async throws -> [TopicDTO] {
-        try await http.send(
+        try await http.sendList(
             request(.patch, "v1/client/preferences", body: PreferencesBody(preferences: changes), headers: identity.headers),
-            as: [TopicDTO].self
+            of: TopicDTO.self
         )
     }
 

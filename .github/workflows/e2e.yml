@@ -1,0 +1,76 @@
+name: e2e
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: Why this run was started, shown in the run name
+        default: manual
+      sdk_ref:
+        description: BuzzKit-iOS ref to build the SDK from (empty = the ref this workflow runs on)
+        default: ''
+      simulator:
+        description: Simulator device name
+        default: iPhone 16
+  schedule:
+    - cron: '0 6 * * *'
+
+run-name: e2e · ${{ inputs.reason || github.event_name }} · ${{ inputs.sdk_ref || github.ref_name }}
+
+concurrency:
+  group: e2e-production
+  cancel-in-progress: false
+
+jobs:
+  device:
+    runs-on: macos-15
+    timeout-minutes: 45
+    env:
+      E2E_SIMULATOR: ${{ inputs.simulator || 'iPhone 16' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.sdk_ref || github.ref }}
+
+      - name: Select Xcode
+        run: |
+          sudo xcode-select -s /Applications/Xcode_16.4.app
+          xcodebuild -version
+
+      - name: Confirm the simulator exists
+        run: xcrun simctl list devices available | grep -F "$E2E_SIMULATOR" || { echo "No simulator named $E2E_SIMULATOR on this runner"; xcrun simctl list devices available; exit 1; }
+
+      - name: Install xcodegen
+        run: brew install xcodegen
+
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Generate the Xcode project
+        working-directory: E2E
+        run: xcodegen generate
+
+      - name: Install runner dependencies
+        working-directory: E2E/Runner
+        run: bun install --frozen-lockfile
+
+      - name: Prove the harness loop before spending real pushes
+        working-directory: E2E/Runner
+        run: bun run smoke
+
+      - name: Run the suite against production
+        working-directory: E2E/Runner
+        env:
+          BUZZKIT_WORKSPACE_KEY: ${{ secrets.BUZZKIT_WORKSPACE_KEY }}
+          BUZZKIT_CLIENT_KEY: ${{ secrets.BUZZKIT_CLIENT_KEY }}
+        run: bunx vitest run --reporter=default --reporter=junit --outputFile=results.xml
+
+      - name: Keep the results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-results-${{ github.run_id }}
+          path: E2E/Runner/results.xml
+          if-no-files-found: ignore

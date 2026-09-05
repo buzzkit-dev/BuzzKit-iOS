@@ -66,6 +66,13 @@ actor HTTPClient {
         throw BuzzKitError.invalidResponse
     }
 
+    func sendList<Element: Decodable & Sendable>(
+        _ request: HTTPRequest,
+        of type: Element.Type
+    ) async throws -> [Element] {
+        try await send(request, as: ListPayload<Element>.self).items
+    }
+
     private func perform(_ request: HTTPRequest) async throws -> Data {
         var attempt = 0
         var lastError: Error = BuzzKitError.invalidResponse

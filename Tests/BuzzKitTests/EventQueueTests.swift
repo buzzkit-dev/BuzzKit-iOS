@@ -26,7 +26,7 @@ import Testing
 
     @Test func flushSendsBatchAndClearsQueue() async throws {
         let mock = MockAPI()
-        mock.stub { _ in jsonResponse(202, #"{"success":true,"data":[]}"#) }
+        mock.stub { _ in jsonResponse(202, #"{"success":true,"data":{"items":[],"hasMore":false,"nextCursor":null}}"#) }
         let queue = try makeQueue(mock)
         await queue.enqueue(event("one"))
         await queue.enqueue(event("two"))
@@ -55,7 +55,7 @@ import Testing
 
     @Test func flushBatchesPerIdentity() async throws {
         let mock = MockAPI()
-        mock.stub { _ in jsonResponse(202, #"{"success":true,"data":[]}"#) }
+        mock.stub { _ in jsonResponse(202, #"{"success":true,"data":{"items":[],"hasMore":false,"nextCursor":null}}"#) }
         let queue = try makeQueue(mock)
         await queue.enqueue(event("anon", externalId: "anon_1", at: Date(timeIntervalSince1970: 100)))
         await queue.enqueue(event("known", externalId: "user_1", identityHash: "h", at: Date(timeIntervalSince1970: 200)))

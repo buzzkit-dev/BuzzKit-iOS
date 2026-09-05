@@ -399,6 +399,19 @@ public final class BuzzKit: @unchecked Sendable {
         return instance
     }
 
+    /// Feeds a received payload through the same path a notification tap takes, so a
+    /// harness can exercise open, action and dismiss handling without driving
+    /// SpringBoard. Not API.
+    @_spi(BuzzKitInternal)
+    public static func openNotification(payload: PushPayload, actionIdentifier: String? = nil, input: String? = nil) {
+        requireInstance()?.handleNotificationOpen(payload: payload, actionIdentifier: actionIdentifier, input: input)
+    }
+
+    @_spi(BuzzKitInternal)
+    public static func dismissNotification(payload: PushPayload) {
+        requireInstance()?.handleNotificationDismiss(payload: payload)
+    }
+
     static func resetForTesting() {
         instanceState.write(nil)
     }
