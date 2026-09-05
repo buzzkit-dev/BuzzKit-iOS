@@ -7,6 +7,8 @@ Initial release of the BuzzKit iOS SDK.
 - `BuzzKit.configure` with one-line and full-`Configuration` forms
 - Anonymous-first identity: stable `anon_` id from first launch, `identify` with
   identity-hash verification, `logout` that detaches the device from the previous user
+- `identify(email:)` saves the address on the subscriber and subscribes it once the
+  tenant has an email provider; `subscribe: [.email: false]` keeps it on file only
 - Durable offline event queue (SQLite): batches of 100 with UUID ids and original
   timestamps, per-identity batching, retry with backoff, flush on launch, foreground,
   identify, and open

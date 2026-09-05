@@ -97,6 +97,7 @@ struct IdentifyBody: Encodable, Sendable {
     let email: String?
     let identityHash: String?
     let attributes: [String: JSONValue]?
+    var subscribe: [String: Bool]?
     var pushPermission: String?
     var device: DeviceContext?
 }

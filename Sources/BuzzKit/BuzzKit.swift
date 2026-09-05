@@ -106,11 +106,16 @@ public final class BuzzKit: @unchecked Sendable {
     ///
     /// Until this is called the user is tracked under a stable anonymous id; identifying
     /// re-registers the push subscription under the real id and keeps every queued event.
+    ///
+    /// `email` is saved on the subscriber (it is the same as `attributes["email"]`) and,
+    /// once the tenant has an email provider connected, is subscribed as well. Pass
+    /// `subscribe: [.email: false]` to keep the address on file without subscribing it.
     public static func identify(
         _ externalId: String,
         email: String? = nil,
         identityHash: String? = nil,
-        attributes: [String: JSONValue]? = nil
+        attributes: [String: JSONValue]? = nil,
+        subscribe: [Channel: Bool] = [:]
     ) {
         guard let instance = requireInstance() else { return }
         instance.enqueueIdentityWork {
@@ -118,7 +123,8 @@ public final class BuzzKit: @unchecked Sendable {
                 externalId: externalId,
                 email: email,
                 identityHash: identityHash,
-                attributes: attributes
+                attributes: attributes,
+                subscribe: subscribe
             )
         }
     }
@@ -314,9 +320,11 @@ public final class BuzzKit: @unchecked Sendable {
         externalId: String,
         email: String?,
         identityHash: String?,
-        attributes: [String: JSONValue]? = nil
+        attributes: [String: JSONValue]? = nil,
+        subscribe: [Channel: Bool] = [:]
     ) async {
         let (identity, changed) = await identityStore.identify(externalId: externalId, identityHash: identityHash)
+        let subscribeByChannel = Dictionary(uniqueKeysWithValues: subscribe.map { ($0.key.rawValue, $0.value) })
         do {
             _ = try await api.identify(
                 IdentifyBody(
@@ -324,6 +332,7 @@ public final class BuzzKit: @unchecked Sendable {
                     email: email,
                     identityHash: identity.identityHash,
                     attributes: attributes,
+                    subscribe: subscribeByChannel.isEmpty ? nil : subscribeByChannel,
                     device: DeviceContext.current(store: KeyValueStore(appGroup: configuration.appGroup))
                 )
             )

@@ -21,6 +21,11 @@ the push subscription is re-registered under the new id, and queued events flush
 it at login and on every launch where the user is already logged in (it is idempotent
 and cheap).
 
+`email` is saved on the subscriber as the `email` attribute (passing it inside
+`attributes` means the same thing), even before the tenant has an email provider.
+Once one is connected, identify also subscribes the address. To keep an address on
+file without subscribing it, pass `subscribe: [.email: false]`.
+
 `BuzzKit.logout()` deletes the device's push subscription for the previous user,
 returns to a **fresh** anonymous id, and re-registers the device under it — the next
 user of the device never receives the previous user's notifications.
