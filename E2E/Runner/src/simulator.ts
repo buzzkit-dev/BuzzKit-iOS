@@ -34,18 +34,27 @@ export async function boot(udid: string): Promise<void> {
 }
 
 export async function build(udid: string): Promise<string> {
-  await run(
-    'xcodebuild',
-    [
-      '-project', `${PROJECT}/E2E.xcodeproj`,
-      '-scheme', 'E2E',
-      '-sdk', 'iphonesimulator',
-      '-destination', `id=${udid}`,
-      '-derivedDataPath', `${PROJECT}/build`,
-      'build',
-    ],
-    { maxBuffer: 64 * 1024 * 1024 }
-  );
+  try {
+    await run(
+      'xcodebuild',
+      [
+        '-project', `${PROJECT}/E2E.xcodeproj`,
+        '-scheme', 'E2E',
+        '-sdk', 'iphonesimulator',
+        '-destination', `id=${udid}`,
+        '-derivedDataPath', `${PROJECT}/build`,
+        'build',
+      ],
+      { maxBuffer: 64 * 1024 * 1024 }
+    );
+  } catch (error) {
+    const output = String((error as { stdout?: string }).stdout ?? '');
+    const diagnostics = output
+      .split('\n')
+      .filter((line) => /: (error|warning): |BUILD FAILED/.test(line))
+      .join('\n');
+    throw new Error(`xcodebuild failed:\n${diagnostics || output.slice(-4000)}`);
+  }
   return `${PROJECT}/build/Build/Products/Debug-iphonesimulator/E2E.app`;
 }
 

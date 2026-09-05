@@ -1,4 +1,4 @@
-name: e2e
+name: E2E / Device
 
 on:
   push:
@@ -14,11 +14,11 @@ on:
         default: ''
       simulator:
         description: Simulator device name
-        default: iPhone 16
+        default: iPhone 17
   schedule:
     - cron: '0 6 * * *'
 
-run-name: e2e · ${{ inputs.reason || github.event_name }} · ${{ inputs.sdk_ref || github.ref_name }}
+run-name: E2E / Device · ${{ inputs.reason || github.event_name }} · ${{ inputs.sdk_ref || github.ref_name }}
 
 concurrency:
   group: e2e-production
@@ -26,10 +26,10 @@ concurrency:
 
 jobs:
   device:
-    runs-on: macos-15
+    runs-on: macos-26
     timeout-minutes: 45
     env:
-      E2E_SIMULATOR: ${{ inputs.simulator || 'iPhone 16' }}
+      E2E_SIMULATOR: ${{ inputs.simulator || 'iPhone 17' }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -37,8 +37,9 @@ jobs:
 
       - name: Select Xcode
         run: |
-          sudo xcode-select -s /Applications/Xcode_16.4.app
+          sudo xcode-select -s /Applications/Xcode_26.6.app
           xcodebuild -version
+          swift --version
 
       - name: Confirm the simulator exists
         run: xcrun simctl list devices available | grep -F "$E2E_SIMULATOR" || { echo "No simulator named $E2E_SIMULATOR on this runner"; xcrun simctl list devices available; exit 1; }
