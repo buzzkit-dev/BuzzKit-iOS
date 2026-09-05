@@ -66,11 +66,15 @@ final class Observer: ObservableObject, BuzzKitDelegate {
         }
 
         let provisional = environment["E2E_PROVISIONAL"] != "0"
-        do {
-            let granted = try await BuzzKit.registerForPush(provisional: provisional)
-            Reporter.send("registerForPush", ["granted": granted, "provisional": provisional])
-        } catch {
-            Reporter.send("registerForPush.failed", ["error": String(describing: error)])
+        for attempt in 1...4 {
+            do {
+                let granted = try await BuzzKit.registerForPush(provisional: provisional)
+                Reporter.send("registerForPush", ["granted": granted, "provisional": provisional, "attempt": attempt])
+                break
+            } catch {
+                Reporter.send("registerForPush.failed", ["error": String(describing: error), "attempt": attempt])
+                if attempt < 4 { try? await Task.sleep(nanoseconds: 5_000_000_000) }
+            }
         }
 
         let status = await BuzzKit.notificationPermission()

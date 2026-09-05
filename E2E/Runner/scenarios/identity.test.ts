@@ -49,14 +49,15 @@ it('setAttributes writes attributes onto the subscriber', async () => {
 
 it('backgrounding and returning later records the session on the identified subscriber', async () => {
   const { api, collector, run, subscriber } = harness;
-  await harness.background();
+  try {
+    await harness.background();
+    await new Promise((resolve) => setTimeout(resolve, 32_000));
+  } finally {
+    await harness.foreground();
+  }
   await collector.command(run, 'flush');
+
   await api.waitForEvent(subscriber, '$app.backgrounded');
-
-  await new Promise((resolve) => setTimeout(resolve, 32_000));
-  await harness.foreground();
-  await collector.command(run, 'flush');
-
   const ended = await api.waitForEvent(subscriber, '$session.ended');
   expect(Number(ended.data?.durationSec ?? 0)).toBeGreaterThan(0);
   await api.waitForEvent(subscriber, '$app.opened');
