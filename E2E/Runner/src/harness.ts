@@ -48,9 +48,14 @@ export async function startHarness(
     E2E_ACTIONS: (options.actions ?? []).join(','),
   });
 
-  await collector.waitFor(run, 'configure.ok');
-  await collector.waitFor(run, 'registerForPush', { timeoutMs: 120_000 });
-  await collector.waitFor(run, 'permission');
+  try {
+    await collector.waitFor(run, 'configure.ok');
+    await collector.waitFor(run, 'registerForPush', { timeoutMs: 120_000 });
+    await collector.waitFor(run, 'permission');
+  } catch (error) {
+    const reports = collector.seen(run).map((report) => `${report.kind} ${JSON.stringify(report.payload)}`);
+    throw new Error(`${String(error)}\nEvery report from the device:\n${reports.join('\n')}`);
+  }
 
   return {
     api,

@@ -1,4 +1,4 @@
-name: E2E / Device
+name: E2E
 
 on:
   push:
@@ -14,11 +14,11 @@ on:
         default: ''
       simulator:
         description: Simulator device name
-        default: iPhone 17
+        default: BuzzKit E2E
   schedule:
     - cron: '0 6 * * *'
 
-run-name: E2E / Device · ${{ inputs.reason || github.event_name }} · ${{ inputs.sdk_ref || github.ref_name }}
+run-name: Device · ${{ inputs.reason || github.event_name }} · ${{ inputs.sdk_ref || github.ref_name }}
 
 concurrency:
   group: e2e-production
@@ -26,26 +26,25 @@ concurrency:
 
 jobs:
   device:
-    runs-on: macos-26
+    name: Device
+    runs-on: buzzkit-mac
     timeout-minutes: 45
     env:
-      E2E_SIMULATOR: ${{ inputs.simulator || 'iPhone 17' }}
+      E2E_SIMULATOR: ${{ inputs.simulator || 'BuzzKit E2E' }}
+      DEVELOPER_DIR: /Applications/Xcode-27.app
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ inputs.sdk_ref || github.ref }}
 
-      - name: Select Xcode
-        run: |
-          sudo xcode-select -s /Applications/Xcode_26.6.app
-          xcodebuild -version
-          swift --version
+      - name: Show the toolchain
+        run: xcodebuild -version
 
       - name: Confirm the simulator exists
         run: xcrun simctl list devices available | grep -F "$E2E_SIMULATOR" || { echo "No simulator named $E2E_SIMULATOR on this runner"; xcrun simctl list devices available; exit 1; }
 
-      - name: Install xcodegen
-        run: brew install xcodegen
+      - name: Confirm xcodegen is installed
+        run: which xcodegen
 
       - uses: oven-sh/setup-bun@v2
 
@@ -67,6 +66,20 @@ jobs:
           BUZZKIT_WORKSPACE_KEY: ${{ secrets.BUZZKIT_WORKSPACE_KEY }}
           BUZZKIT_CLIENT_KEY: ${{ secrets.BUZZKIT_CLIENT_KEY }}
         run: bunx vitest run --reporter=default --reporter=junit --outputFile=results.xml
+
+      - name: Explain a push failure from the simulator's own logs
+        if: failure()
+        run: |
+          udid="$(xcrun simctl list devices booted --json | python3 -c 'import json,sys; d=json.load(sys.stdin)["devices"]; print(next((x["udid"] for v in d.values() for x in v), ""))')"
+          [ -n "$udid" ] || { echo "no booted simulator"; exit 0; }
+          echo "== apsd running? =="; xcrun simctl spawn "$udid" launchctl list 2>/dev/null | grep -c apsd || true
+          echo "== apsd / push registration =="
+          xcrun simctl spawn "$udid" log show --last 25m --style compact \
+            --predicate 'process == "apsd" OR eventMessage CONTAINS "dev.buzzkit.e2e" OR eventMessage CONTAINS[c] "remote notification"' 2>/dev/null \
+            | grep -iE "error|fail|refus|denied|unable|could not|connect|courier|activation|token" | grep -viE "opportunistic|enabled topics|PersistentConnection|timer" | tail -60
+          echo "== can the runner reach APNs? =="
+          nc -zv -w 5 1-courier.push.apple.com 5223 2>&1 || true
+          nc -zv -w 5 1-courier.push.apple.com 443 2>&1 || true
 
       - name: Keep the results
         if: always()

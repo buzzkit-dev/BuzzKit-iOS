@@ -9,7 +9,7 @@ struct E2EApp: App {
     @StateObject private var observer = Observer()
 
     init() {
-        let environment = ProcessInfo.processInfo.environment
+        let environment = HarnessSettings.resolve()
         Reporter.run = environment["E2E_RUN"] ?? "unknown"
         Reporter.collector = environment["E2E_COLLECTOR"].flatMap(URL.init(string:))
 
@@ -31,7 +31,7 @@ struct E2EApp: App {
         BuzzKit.onDeepLink { url in
             Reporter.send("deepLink", ["url": url.absoluteString])
         }
-        for name in ProcessInfo.processInfo.environment["E2E_ACTIONS"]?.split(separator: ",") ?? [] {
+        for name in HarnessSettings.resolve()["E2E_ACTIONS"]?.split(separator: ",") ?? [] {
             let action = String(name)
             BuzzKit.actions.register(action) { remote in
                 Reporter.send("action", ["name": action, "data": "\(remote.data)"])
@@ -59,7 +59,7 @@ final class Observer: ObservableObject, BuzzKitDelegate {
         started = true
         BuzzKit.delegate = self
 
-        let environment = ProcessInfo.processInfo.environment
+        let environment = HarnessSettings.resolve()
         if let subscriber = environment["E2E_SUBSCRIBER"], !subscriber.isEmpty {
             BuzzKit.identify(subscriber)
             Reporter.send("identify", ["externalId": subscriber])
