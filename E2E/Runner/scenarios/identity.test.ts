@@ -212,7 +212,7 @@ it('has nothing pending to merge on a device that never went anonymous to identi
   expect(anonymous.payload.pending).toBe(false);
 });
 
-it('keeps the merge pending through a failed identify and completes it on the next launch', async () => {
+it('keeps the merge pending through a failed identify and completes it after the next launch', async () => {
   const { api, collector, relaunch, run, subscriber } = harness;
   const signedUp = `${subscriber}-retried`;
   await collector.command(run, 'logout');
@@ -222,8 +222,7 @@ it('keeps the merge pending through a failed identify and completes it on the ne
   await collector.command(run, 'track', { name: 'retried.opened' });
   await api.waitForEvent(anonymousId, 'retried.opened');
 
-  await relaunch({ E2E_API_URL: 'http://127.0.0.1:1' });
-  await collector.command(run, 'identify', { externalId: signedUp });
+  await collector.command(run, 'identify', { externalId: signedUp, identityHash: 'a'.repeat(64) });
 
   try {
     const pending = await collector.command(run, 'pendingMerge');
@@ -231,6 +230,11 @@ it('keeps the merge pending through a failed identify and completes it on the ne
     await expect(api.subscriber(signedUp)).rejects.toThrow();
 
     await relaunch();
+
+    const stillPending = await collector.command(run, 'pendingMerge');
+    expect(stillPending.payload.pending).toBe(true);
+
+    await collector.command(run, 'identify', { externalId: signedUp });
 
     const merged = await api.waitForEvent(signedUp, '$subscriber.merged');
     expect(merged.data?.from).toBe(anonymousId);
