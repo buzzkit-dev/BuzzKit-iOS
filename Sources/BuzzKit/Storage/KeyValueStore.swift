@@ -53,6 +53,7 @@ enum StorageKey {
     static let anonymousId = "anonymousId"
     static let externalId = "externalId"
     static let identityHash = "identityHash"
+    static let pendingMergeFrom = "pendingMergeFrom"
     static let email = "email"
     static let subscriptionId = "subscriptionId"
     static let deviceToken = "deviceToken"

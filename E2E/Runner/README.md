@@ -19,6 +19,10 @@ the token as a sandbox token and BuzzKit sends to the sandbox gateway.
 It does not cover the production APNs gateway, real background and low-power delivery, or
 lock screen and Focus presentation. Those stay a manual pass on a physical device.
 
+The harness can relaunch the app mid-scenario with different launch environment values
+(`relaunch({ E2E_API_URL: ... })`), which is how the identity suite proves that a merge
+left pending by a failed identify completes on its own at the next launch.
+
 ## What a run needs
 
 | Variable | Meaning |

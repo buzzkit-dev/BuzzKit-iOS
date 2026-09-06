@@ -100,6 +100,7 @@ struct IdentifyBody: Encodable, Sendable {
     var subscribe: [String: Bool]?
     var pushPermission: String?
     var device: DeviceContext?
+    var anonymousId: String?
 }
 
 struct RegisterSubscriptionBody: Encodable, Sendable {

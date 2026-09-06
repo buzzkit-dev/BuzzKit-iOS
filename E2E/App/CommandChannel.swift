@@ -43,6 +43,16 @@ enum CommandChannel {
         case "logout":
             BuzzKit.logout()
             Reporter.send("command.done", ["id": id, "name": name])
+        case "identity":
+            let externalId = await BuzzKit.currentExternalId() ?? ""
+            let anonymous = await BuzzKit.isAnonymous()
+            Reporter.send(
+                "command.done",
+                ["id": id, "name": name, "externalId": externalId, "anonymous": anonymous]
+            )
+        case "pendingMerge":
+            let pending = await BuzzKit.hasPendingMerge()
+            Reporter.send("command.done", ["id": id, "name": name, "pending": pending])
         case "track":
             BuzzKit.track(arguments["name"] as? String ?? "unknown")
             await settleEvents()

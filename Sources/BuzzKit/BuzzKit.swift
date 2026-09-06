@@ -159,6 +159,28 @@ public final class BuzzKit: @unchecked Sendable {
         }
     }
 
+    /// The id this device is currently known by: your own id once `identify` has been called,
+    /// or the anonymous id the SDK minted before that. Returns nil when BuzzKit is not configured.
+    public static func currentExternalId() async -> String? {
+        guard let instance = requireInstance() else { return nil }
+        return await instance.identityStore.current.externalId
+    }
+
+    /// Whether this device is still anonymous, meaning `identify` has not been called since
+    /// launch or since the last `logout`.
+    public static func isAnonymous() async -> Bool {
+        guard let instance = requireInstance() else { return true }
+        return await instance.identityStore.current.isAnonymous
+    }
+
+    /// Whether an anonymous identity is still waiting to be merged into the identified one,
+    /// because the identify call that carried it has not been accepted yet. The SDK resends it
+    /// on the next identify and on the next launch until the API settles it.
+    public static func hasPendingMerge() async -> Bool {
+        guard let instance = requireInstance() else { return false }
+        return await instance.identityStore.hasPendingMerge
+    }
+
     // MARK: - Events
 
     /// Tracks a custom event. Events are queued durably on the device and delivered in
@@ -266,6 +288,7 @@ public final class BuzzKit: @unchecked Sendable {
             Task { await self.eventQueue.flush() }
         }
         Task {
+            await retryPendingMerge()
             await trackInstallation()
             if configuration.automaticSessionTracking {
                 await sessionTracker.start()
@@ -323,8 +346,13 @@ public final class BuzzKit: @unchecked Sendable {
         attributes: [String: JSONValue]? = nil,
         subscribe: [Channel: Bool] = [:]
     ) async {
-        let (identity, changed) = await identityStore.identify(externalId: externalId, identityHash: identityHash)
+        let (identity, changed, mergedFrom) = await identityStore.identify(
+            externalId: externalId,
+            identityHash: identityHash
+        )
         let subscribeByChannel = Dictionary(uniqueKeysWithValues: subscribe.map { ($0.key.rawValue, $0.value) })
+        var failure: Error?
+
         do {
             _ = try await api.identify(
                 IdentifyBody(
@@ -333,16 +361,30 @@ public final class BuzzKit: @unchecked Sendable {
                     identityHash: identity.identityHash,
                     attributes: attributes,
                     subscribe: subscribeByChannel.isEmpty ? nil : subscribeByChannel,
-                    device: DeviceContext.current(store: KeyValueStore(appGroup: configuration.appGroup))
+                    device: DeviceContext.current(store: KeyValueStore(appGroup: configuration.appGroup)),
+                    anonymousId: mergedFrom
                 )
             )
         } catch {
+            failure = error
             logger.warn("Identify failed, will rely on the next registration: \(error)")
         }
+        
+        if mergedFrom != nil, resolveMerge(after: failure) == .settle {
+            await identityStore.settleMerge()
+        }
+
         if changed {
             await eventQueue.flush()
             await pushManager.reregister()
         }
+    }
+
+    private func retryPendingMerge() async {
+        guard await identityStore.hasPendingMerge else { return }
+        let identity = await identityStore.current
+        guard !identity.isAnonymous else { return }
+        await performIdentify(externalId: identity.externalId, email: nil, identityHash: identity.identityHash)
     }
 
     func performLogout() async {

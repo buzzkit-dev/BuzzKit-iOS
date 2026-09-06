@@ -26,6 +26,19 @@ and cheap).
 Once one is connected, identify also subscribes the address. To keep an address on
 file without subscribing it, pass `subscribe: [.email: false]`.
 
+## Carrying the anonymous history over
+
+The first identify after the device was anonymous also asks the API to merge the
+anonymous subscriber into the identified one, so devices, topic choices, attributes and
+the whole timeline follow the person. The anonymous id stays resolvable afterwards as an
+alias, so a request still naming it reaches the same subscriber.
+
+That merge is held on the device until the API accepts it. If the identify call fails,
+because the device is offline or the API asks for a retry, the SDK keeps the anonymous id
+and resends it on the next identify and on the next launch, so a failed login never
+strands the history. `BuzzKit.hasPendingMerge()` reports whether one is still waiting.
+Logging out drops it, since a fresh anonymous id starts a new history.
+
 `BuzzKit.logout()` deletes the device's push subscription for the previous user,
 returns to a **fresh** anonymous id, and re-registers the device under it — the next
 user of the device never receives the previous user's notifications.

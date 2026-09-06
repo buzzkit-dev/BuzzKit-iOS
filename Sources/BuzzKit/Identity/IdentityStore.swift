@@ -15,6 +15,7 @@ actor IdentityStore {
     private var anonymousId: String
     private var externalId: String?
     private var identityHash: String?
+    private var pendingMergeFrom: String?
 
     init(store: KeyValueStore) {
         self.store = store
@@ -26,6 +27,7 @@ actor IdentityStore {
         }
         externalId = store.string(StorageKey.externalId)
         identityHash = store.string(StorageKey.identityHash)
+        pendingMergeFrom = store.string(StorageKey.pendingMergeFrom)
     }
 
     var current: Identity {
@@ -36,22 +38,40 @@ actor IdentityStore {
         )
     }
 
-    func identify(externalId newExternalId: String, identityHash newHash: String?) -> (identity: Identity, changed: Bool) {
+    func identify(
+        externalId newExternalId: String,
+        identityHash newHash: String?
+    ) -> (identity: Identity, changed: Bool, mergedFrom: String?) {
         let changed = newExternalId != externalId || newHash != identityHash
+        if externalId == nil && newExternalId != anonymousId {
+            pendingMergeFrom = anonymousId
+            store.set(anonymousId, for: StorageKey.pendingMergeFrom)
+        }
         externalId = newExternalId
         identityHash = newHash
         store.set(newExternalId, for: StorageKey.externalId)
         store.set(newHash, for: StorageKey.identityHash)
-        return (current, changed)
+        return (current, changed, pendingMergeFrom)
+    }
+
+    var hasPendingMerge: Bool {
+        pendingMergeFrom != nil
+    }
+
+    func settleMerge() {
+        pendingMergeFrom = nil
+        store.set(nil as String?, for: StorageKey.pendingMergeFrom)
     }
 
     func logout() -> Identity {
         externalId = nil
         identityHash = nil
+        pendingMergeFrom = nil
         anonymousId = Self.makeAnonymousId()
         store.set(anonymousId, for: StorageKey.anonymousId)
         store.set(nil as String?, for: StorageKey.externalId)
         store.set(nil as String?, for: StorageKey.identityHash)
+        store.set(nil as String?, for: StorageKey.pendingMergeFrom)
         return current
     }
 

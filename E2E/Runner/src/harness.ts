@@ -21,6 +21,7 @@ export type Harness = {
   subscriber: string;
   background: () => Promise<void>;
   foreground: () => Promise<void>;
+  relaunch: (overrides?: Record<string, string>) => Promise<void>;
   stop: () => Promise<void>;
 };
 
@@ -39,14 +40,15 @@ export async function startHarness(
   const app = await build(udid);
   await uninstall(udid);
   await install(udid, app);
-  await launch(udid, {
+  const environment = {
     E2E_RUN: run,
     E2E_API_KEY: config.clientKey,
     E2E_API_URL: config.apiUrl,
     E2E_COLLECTOR: collector.url,
     E2E_SUBSCRIBER: subscriber,
     E2E_ACTIONS: (options.actions ?? []).join(','),
-  });
+  };
+  await launch(udid, environment);
 
   try {
     await collector.waitFor(run, 'configure.ok');
@@ -65,6 +67,11 @@ export async function startHarness(
     subscriber,
     background: () => background(udid),
     foreground: () => foreground(udid),
+    relaunch: async (overrides = {}) => {
+      const after = collector.count();
+      await launch(udid, { ...environment, ...overrides });
+      await collector.waitFor(run, 'configure.ok', { after, timeoutMs: 120_000 });
+    },
     stop: async () => {
       await terminate(udid).catch(() => undefined);
       await api.removeSubscriber(subscriber).catch(() => undefined);

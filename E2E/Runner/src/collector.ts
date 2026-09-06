@@ -82,6 +82,10 @@ export class Collector {
     return await Promise.race([done, failed]);
   }
 
+  count(): number {
+    return this.reports.length;
+  }
+
   seen(run: string): Report[] {
     return this.reports.filter((report) => report.run === run);
   }
@@ -89,13 +93,13 @@ export class Collector {
   async waitFor(
     run: string,
     kind: string,
-    options: { timeoutMs?: number; where?: (report: Report) => boolean } = {}
+    options: { timeoutMs?: number; where?: (report: Report) => boolean; after?: number } = {}
   ): Promise<Report> {
     const timeoutMs = options.timeoutMs ?? 60_000;
     const deadline = Date.now() + timeoutMs;
 
     while (Date.now() < deadline) {
-      const match = this.reports.find(
+      const match = this.reports.slice(options.after ?? 0).find(
         (report) =>
           report.run === run && report.kind === kind && (options.where?.(report) ?? true)
       );

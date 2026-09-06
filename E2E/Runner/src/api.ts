@@ -157,4 +157,19 @@ export class Api {
   removeSubscriber(externalId: string) {
     return this.call<unknown>('DELETE', `/v1/subscribers/${encodeURIComponent(externalId)}`);
   }
+
+  aliases(externalId: string) {
+    return this.call<{ items: { externalId: string; source: string }[] }>(
+      'GET',
+      `/v1/subscribers/${encodeURIComponent(externalId)}/aliases`
+    );
+  }
+
+  addAlias(externalId: string, alias: string) {
+    return this.call<{ items: { externalId: string; source: string }[] }>(
+      'POST',
+      `/v1/subscribers/${encodeURIComponent(externalId)}/aliases`,
+      { externalId: alias }
+    );
+  }
 }

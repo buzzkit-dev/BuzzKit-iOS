@@ -102,3 +102,158 @@ it('stops delivering to the device after logout', async () => {
   const active = page.items.filter((subscription) => subscription.enabled);
   expect(active).toEqual([]);
 });
+
+it('mints a fresh anonymous identity after logout', async () => {
+  const { collector, run } = harness;
+  const report = await collector.command(run, 'identity');
+
+  expect(report.payload.anonymous).toBe(true);
+  expect(String(report.payload.externalId)).toMatch(/^anon_/);
+});
+
+it('carries the anonymous device and its events onto the identity it signs up as', async () => {
+  const { api, collector, run, subscriber } = harness;
+  const identity = await collector.command(run, 'identity');
+  const anonymousId = String(identity.payload.externalId);
+  const signedUp = `${subscriber}-signup`;
+
+  await collector.command(run, 'track', { name: 'onboarding.completed' });
+  await api.waitForEvent(anonymousId, 'onboarding.completed');
+  const anonymous = await api.subscriptions(anonymousId);
+  expect(anonymous.items.length).toBeGreaterThan(0);
+
+  await collector.command(run, 'identify', { externalId: signedUp });
+
+  try {
+    const merged = await api.waitForEvent(signedUp, '$subscriber.merged');
+    expect(merged.data?.from).toBe(anonymousId);
+
+    const carried = await api.subscriptions(signedUp);
+    expect(carried.items.map((subscription) => subscription.id)).toEqual(
+      anonymous.items.map((subscription) => subscription.id)
+    );
+
+    const timeline = await api.timeline(signedUp);
+    expect(timeline.items.map((event) => event.name)).toContain('onboarding.completed');
+
+    const aliases = await api.aliases(signedUp);
+    expect(aliases.items.map((alias) => alias.externalId)).toContain(anonymousId);
+    expect(aliases.items.find((alias) => alias.externalId === anonymousId)?.source).toBe('system');
+
+    const byAlias = await api.subscriber(anonymousId);
+    expect(byAlias.externalId).toBe(signedUp);
+  } finally {
+    await api.removeSubscriber(signedUp).catch(() => undefined);
+  }
+});
+
+it('folds a second anonymous install into the identity that already exists', async () => {
+  const { api, collector, run, subscriber } = harness;
+  const signedUp = `${subscriber}-second`;
+
+  await api.upsertSubscriber(signedUp, { attributes: { seat: 'first' } });
+  await collector.command(run, 'logout');
+  const identity = await collector.command(run, 'identity');
+  const anonymousId = String(identity.payload.externalId);
+
+  await collector.command(run, 'track', { name: 'second.device.opened' });
+  await api.waitForEvent(anonymousId, 'second.device.opened');
+
+  await collector.command(run, 'identify', { externalId: signedUp });
+
+  try {
+    const merged = await api.waitForEvent(signedUp, '$subscriber.merged');
+    expect(merged.data?.from).toBe(anonymousId);
+
+    const carried = await api.subscriptions(signedUp);
+    expect(carried.items.length).toBeGreaterThan(0);
+    expect((await api.subscriber(anonymousId)).externalId).toBe(signedUp);
+  } finally {
+    await api.removeSubscriber(signedUp).catch(() => undefined);
+  }
+});
+
+it('settles the merge so identifying again on every launch never repeats it', async () => {
+  const { api, collector, run, subscriber } = harness;
+  const signedUp = `${subscriber}-settled`;
+  await collector.command(run, 'logout');
+  const identity = await collector.command(run, 'identity');
+  const anonymousId = String(identity.payload.externalId);
+
+  await collector.command(run, 'track', { name: 'settled.opened' });
+  await api.waitForEvent(anonymousId, 'settled.opened');
+
+  await collector.command(run, 'identify', { externalId: signedUp });
+
+  try {
+    const merged = await api.waitForEvent(signedUp, '$subscriber.merged');
+    expect(merged.data?.from).toBe(anonymousId);
+
+    const settled = await collector.command(run, 'pendingMerge');
+    expect(settled.payload.pending).toBe(false);
+
+    await collector.command(run, 'identify', { externalId: signedUp });
+    await collector.command(run, 'track', { name: 'settled.again' });
+    await api.waitForEvent(signedUp, 'settled.again');
+
+    const timeline = await api.timeline(signedUp);
+    const merges = timeline.items.filter((event) => event.name === '$subscriber.merged');
+    expect(merges.length).toBe(1);
+  } finally {
+    await api.removeSubscriber(signedUp).catch(() => undefined);
+  }
+});
+
+it('has nothing pending to merge on a device that never went anonymous to identified', async () => {
+  const { collector, run } = harness;
+  await collector.command(run, 'logout');
+
+  const anonymous = await collector.command(run, 'pendingMerge');
+  expect(anonymous.payload.pending).toBe(false);
+});
+
+it('keeps the merge pending through a failed identify and completes it on the next launch', async () => {
+  const { api, collector, relaunch, run, subscriber } = harness;
+  const signedUp = `${subscriber}-retried`;
+  await collector.command(run, 'logout');
+  const identity = await collector.command(run, 'identity');
+  const anonymousId = String(identity.payload.externalId);
+
+  await collector.command(run, 'track', { name: 'retried.opened' });
+  await api.waitForEvent(anonymousId, 'retried.opened');
+
+  await relaunch({ E2E_API_URL: 'http://127.0.0.1:1' });
+  await collector.command(run, 'identify', { externalId: signedUp });
+
+  try {
+    const pending = await collector.command(run, 'pendingMerge');
+    expect(pending.payload.pending).toBe(true);
+    await expect(api.subscriber(signedUp)).rejects.toThrow();
+
+    await relaunch();
+
+    const merged = await api.waitForEvent(signedUp, '$subscriber.merged');
+    expect(merged.data?.from).toBe(anonymousId);
+
+    const settled = await collector.command(run, 'pendingMerge');
+    expect(settled.payload.pending).toBe(false);
+
+    const timeline = await api.timeline(signedUp);
+    expect(timeline.items.map((event) => event.name)).toContain('retried.opened');
+    expect((await api.subscriber(anonymousId)).externalId).toBe(signedUp);
+  } finally {
+    await api.removeSubscriber(signedUp).catch(() => undefined);
+  }
+});
+
+it('links a legacy id onto the device subscriber through the alias endpoint', async () => {
+  const { api, collector, run, subscriber } = harness;
+  const legacy = `${subscriber}-legacy`;
+  await collector.command(run, 'identify', { externalId: subscriber });
+  await api.waitForEvent(subscriber, '$identify');
+
+  const linked = await api.addAlias(subscriber, legacy);
+  expect(linked.items.map((alias) => alias.externalId)).toContain(legacy);
+  expect(linked.items.find((alias) => alias.externalId === legacy)?.source).toBe('manual');
+  expect((await api.subscriber(legacy)).externalId).toBe(subscriber);
+});

@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- Anonymous history now follows the person on sign-up: the first `identify` after the
+  device was anonymous asks the API to merge the anonymous subscriber into the
+  identified one, so devices, topic choices, attributes and the timeline carry over, and
+  the anonymous id keeps resolving afterwards as an alias
+- The merge is held on the device until the API accepts it. A failed identify, offline
+  or a retryable rejection, no longer strands the anonymous history: the SDK resends it
+  on the next identify and on the next launch, and drops it only once the API settles it
+  or permanently refuses it. `BuzzKit.hasPendingMerge()` reports whether one is waiting
+
 ## 1.0.0 (2026-09-05)
 
 Initial release of the BuzzKit iOS SDK.
