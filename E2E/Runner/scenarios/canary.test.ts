@@ -17,7 +17,10 @@ const spec = {
 };
 
 async function ensureCanary(api: Api) {
-  await api.upsertSubscriber(subscriber, { timezone: 'UTC', attributes: { canary: true } });
+  const known = await api.subscriber(subscriber).catch(() => null);
+  if (!known) {
+    await api.upsertSubscriber(subscriber, { timezone: 'UTC', attributes: { canary: true } });
+  }
   await api
     .createSegment(segment, 'E2E canary', { ref: 'attributes.canary', eq: true })
     .catch((error: unknown) => {

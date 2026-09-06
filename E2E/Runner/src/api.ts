@@ -140,17 +140,25 @@ export class Api {
   ) {
     const deadline = Date.now() + (options.timeoutMs ?? 45_000);
     let seen: string[] = [];
+    let appeared = false;
 
     while (Date.now() < deadline) {
-      const page = await this.timeline(externalId);
-      seen = page.items.map((event) => event.name);
-      const match = page.items.find(
-        (event) => event.name === name && (options.where?.(event) ?? true)
-      );
-      if (match) return match;
+      const page = await this.timeline(externalId).catch((error: unknown) => {
+        if (String(error).includes('-> 404')) return null;
+        throw error;
+      });
+      if (page) {
+        appeared = true;
+        seen = page.items.map((event) => event.name);
+        const match = page.items.find(
+          (event) => event.name === name && (options.where?.(event) ?? true)
+        );
+        if (match) return match;
+      }
       await new Promise((resolve) => setTimeout(resolve, 750));
     }
 
+    if (!appeared) throw new Error(`The subscriber "${externalId}" never appeared while waiting for "${name}".`);
     throw new Error(`Timeline never showed "${name}". Saw: ${seen.join(', ') || '(nothing)'}`);
   }
 
