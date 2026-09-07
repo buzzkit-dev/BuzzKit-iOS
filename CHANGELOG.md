@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- Live Activity and push-to-start token registration failures are now logged instead of
+  silently swallowed by `try?`. A failed registration leaves the server unable to update
+  or end that activity, and previously produced no signal of any kind on the device
+
+- `BuzzKitDelegate` can now read what the user typed into a text input notification
+  action: `buzzKit(_:didOpen:actionIdentifier:input:)`. The reply was already captured
+  and tracked on `$notification.opened`, but never reached the app, so a two-way action
+  could not be answered in the user's own words. The new method has a default that
+  forwards to `buzzKit(_:didOpen:actionIdentifier:)`, so existing delegates are unchanged
+
 - Anonymous history now follows the person on sign-up: the first `identify` after the
   device was anonymous asks the API to merge the anonymous subscriber into the
   identified one, so devices, topic choices, attributes and the timeline carry over, and

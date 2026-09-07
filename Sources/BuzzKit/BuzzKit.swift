@@ -404,7 +404,7 @@ public final class BuzzKit: @unchecked Sendable {
             await tracker.trackSystem(EventNames.notificationOpened, data: data.isEmpty ? nil : data)
             await eventQueue.flush()
         }
-        delegateValue?.buzzKit(self, didOpen: payload, actionIdentifier: actionIdentifier)
+        delegateValue?.buzzKit(self, didOpen: payload, actionIdentifier: actionIdentifier, input: input)
         deepLinkCenter.dispatch(payload: payload, from: self)
     }
 

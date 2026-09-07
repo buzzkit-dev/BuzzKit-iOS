@@ -21,6 +21,17 @@ public protocol BuzzKitDelegate: AnyObject, Sendable {
     /// identifier when one was tapped.
     func buzzKit(_ buzzKit: BuzzKit, didOpen payload: PushPayload, actionIdentifier: String?)
 
+    /// Called after the user opened a notification, carrying the text they typed when the
+    /// tapped action was a text input action. Implement this instead of
+    /// ``buzzKit(_:didOpen:actionIdentifier:)`` when the reply matters; the default
+    /// forwards to it.
+    func buzzKit(
+        _ buzzKit: BuzzKit,
+        didOpen payload: PushPayload,
+        actionIdentifier: String?,
+        input: String?
+    )
+
     /// Routes a deep link carried by a notification. Return `true` when handled; on
     /// `false` BuzzKit hands the URL to the system.
     func buzzKit(_ buzzKit: BuzzKit, openDeepLink url: URL) -> Bool
@@ -36,6 +47,15 @@ extension BuzzKitDelegate {
     public func buzzKit(_ buzzKit: BuzzKit, didReceive payload: PushPayload) {}
 
     public func buzzKit(_ buzzKit: BuzzKit, didOpen payload: PushPayload, actionIdentifier: String?) {}
+
+    public func buzzKit(
+        _ buzzKit: BuzzKit,
+        didOpen payload: PushPayload,
+        actionIdentifier: String?,
+        input _: String?
+    ) {
+        self.buzzKit(buzzKit, didOpen: payload, actionIdentifier: actionIdentifier)
+    }
 
     public func buzzKit(_ buzzKit: BuzzKit, openDeepLink url: URL) -> Bool {
         false

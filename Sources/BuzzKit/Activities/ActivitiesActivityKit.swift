@@ -74,7 +74,11 @@ extension BuzzKit.Activities {
         let boxed = UncheckedSendableBox(activity)
         Task {
             for await token in boxed.value.pushTokenUpdates {
-                try? await register(id: activityId, token: token, attributesType: attributesType)
+                do {
+                    try await register(id: activityId, token: token, attributesType: attributesType)
+                } catch {
+                    sdk?.logger.warn("Live Activity token registration failed for \(activityId): \(error)")
+                }
             }
         }
         Task {
@@ -103,7 +107,11 @@ extension BuzzKit.Activities {
         let attributesType = String(describing: Attributes.self)
         Task {
             for await token in Activity<Attributes>.pushToStartTokenUpdates {
-                try? await registerPushToStartToken(token, attributesType: attributesType)
+                do {
+                    try await registerPushToStartToken(token, attributesType: attributesType)
+                } catch {
+                    sdk?.logger.warn("Push-to-start token registration failed for \(attributesType): \(error)")
+                }
             }
         }
     }
