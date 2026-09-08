@@ -168,11 +168,10 @@ actor PushManager {
         await registerSubscription(token: token)
     }
 
-    func unregisterCurrentSubscription() async {
+    func unregisterSubscription(as owner: Identity) async {
         guard let subscriptionId = store.string(StorageKey.subscriptionId) else { return }
-        let current = await identity.current
         do {
-            try await api.deleteSubscription(id: subscriptionId, identity: current.subscriberIdentity)
+            try await api.deleteSubscription(id: subscriptionId, identity: owner.subscriberIdentity)
             store.set(nil as String?, for: StorageKey.subscriptionId)
         } catch {
             logger.warn("Failed to remove the push subscription at logout: \(error)")

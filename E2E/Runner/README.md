@@ -21,7 +21,12 @@ lock screen and Focus presentation. Those stay a manual pass on a physical devic
 
 The harness can relaunch the app mid-scenario with different launch environment values
 (`relaunch({ E2E_API_URL: ... })`), which is how the identity suite proves that a merge
-left pending by a failed identify completes on its own at the next launch.
+left pending by a failed identify completes on its own at the next launch. The app identifies
+as `E2E_SUBSCRIBER` on every launch, so a scenario that must observe the SDK's own launch
+behaviour relaunches with `E2E_SUBSCRIBER: ''`; otherwise that identify runs first and, for
+instance, settles a pending merge into the run's subscriber. Commands that change identity
+(`identify`, `logout`) report done only after the SDK's identity queue has drained
+(`BuzzKit.settleIdentity()`), so the next command reads the state those calls leave behind.
 
 ## What a run needs
 

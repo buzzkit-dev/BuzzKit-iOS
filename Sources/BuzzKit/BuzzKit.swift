@@ -388,8 +388,9 @@ public final class BuzzKit: @unchecked Sendable {
     }
 
     func performLogout() async {
-        await pushManager.unregisterCurrentSubscription()
+        let previous = await identityStore.current
         _ = await identityStore.logout()
+        await pushManager.unregisterSubscription(as: previous)
         await pushManager.reregister()
         logger.info("Logged out to a fresh anonymous identity")
     }
@@ -461,6 +462,13 @@ public final class BuzzKit: @unchecked Sendable {
     @_spi(BuzzKitInternal)
     public static func dismissNotification(payload: PushPayload) {
         requireInstance()?.handleNotificationDismiss(payload: payload)
+    }
+
+    /// Waits until every queued identify, logout and merge retry has run, so a harness
+    /// can read the identity that those calls leave behind. Not API.
+    @_spi(BuzzKitInternal)
+    public static func settleIdentity() async {
+        await instanceIfConfigured?.identityWork.drain()
     }
 
     static func resetForTesting() {

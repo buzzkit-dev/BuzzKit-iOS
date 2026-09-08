@@ -38,10 +38,12 @@ enum CommandChannel {
         switch name {
         case "identify":
             BuzzKit.identify(arguments["externalId"] as? String ?? "", identityHash: arguments["identityHash"] as? String)
+            await BuzzKit.settleIdentity()
             await settleEvents()
             Reporter.send("command.done", ["id": id, "name": name])
         case "logout":
             BuzzKit.logout()
+            await BuzzKit.settleIdentity()
             Reporter.send("command.done", ["id": id, "name": name])
         case "identity":
             let externalId = await BuzzKit.currentExternalId() ?? ""

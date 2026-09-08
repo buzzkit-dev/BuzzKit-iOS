@@ -229,7 +229,7 @@ it('keeps the merge pending through a failed identify and completes it after the
     expect(pending.payload.pending).toBe(true);
     await expect(api.subscriber(signedUp)).rejects.toThrow();
 
-    await relaunch();
+    await relaunch({ E2E_SUBSCRIBER: '' });
 
     const stillPending = await collector.command(run, 'pendingMerge');
     expect(stillPending.payload.pending).toBe(true);
