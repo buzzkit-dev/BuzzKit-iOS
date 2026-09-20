@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 1.1.0 (2026-09-20)
+
 - Live Activity and push-to-start token registration failures are now logged instead of
   silently swallowed by `try?`. A failed registration leaves the server unable to update
   or end that activity, and previously produced no signal of any kind on the device
