@@ -44,6 +44,17 @@ struct ClientAPI: Sendable {
         )
     }
 
+    func registerWidget(_ body: RegisterWidgetBody) async throws -> WidgetDTO {
+        try await http.send(request(.post, "v1/client/widgets", body: body), as: WidgetDTO.self)
+    }
+
+    func deleteWidget(id: String, identity: SubscriberIdentity) async throws {
+        _ = try await http.send(
+            request(.delete, "v1/client/widgets/\(id)", headers: identity.headers),
+            as: WidgetDTO.self
+        )
+    }
+
     func preferences(identity: SubscriberIdentity) async throws -> [TopicDTO] {
         try await http.sendList(
             request(.get, "v1/client/preferences", headers: identity.headers),
@@ -164,6 +175,17 @@ struct LiveActivityDTO: Decodable, Sendable {
     let activityId: String?
     let attributesType: String
     let kind: String
+}
+
+struct RegisterWidgetBody: Encodable, Sendable {
+    let externalId: String
+    let identityHash: String?
+    let token: String
+    let environment: String?
+}
+
+struct WidgetDTO: Decodable, Sendable {
+    let id: String
 }
 
 struct SubscriberDTO: Decodable, Sendable {

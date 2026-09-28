@@ -49,7 +49,7 @@ public struct ActiveNotification: Sendable, Equatable {
 }
 
 extension BuzzKit {
-    /// What the SDK clears when the app launches or returns to the foreground.
+    /// What the SDK clears on its own.
     public struct NotificationClearing: OptionSet, Sendable {
         public let rawValue: Int
 
@@ -57,21 +57,23 @@ extension BuzzKit {
             self.rawValue = rawValue
         }
 
-        /// When the app opens, resets the app icon badge to zero.
+        /// When the user taps a notification sent with a `threadId`, removes the rest of
+        /// that thread and sets the badge to the number of BuzzKit notifications left.
+        /// Every other thread, and every notification without a thread, stays.
+        public static let tappedThread = NotificationClearing(rawValue: 1 << 3)
+        /// When the app opens, resets the badge to zero.
         public static let badge = NotificationClearing(rawValue: 1 << 0)
-        /// When the app opens, removes the BuzzKit notifications that were sent without
-        /// a `threadId`. Notifications from other sources stay.
-        public static let notifications = NotificationClearing(rawValue: 1 << 1)
-        /// When the app opens, removes the BuzzKit notifications of every thread as
-        /// well, instead of leaving each thread until it is opened.
+        /// When the app opens, removes the BuzzKit notifications sent without a `threadId`.
+        public static let unthreaded = NotificationClearing(rawValue: 1 << 1)
+        /// When the app opens, removes the BuzzKit notifications of every thread.
         public static let threads = NotificationClearing(rawValue: 1 << 2)
-        /// When the user opens a notification sent with a `threadId`, removes the rest
-        /// of that thread and leaves every other thread alone.
-        public static let openedThread = NotificationClearing(rawValue: 1 << 3)
-        /// The default: the badge and the unthreaded notifications when the app opens,
-        /// and each thread when one of its notifications is opened.
-        public static let `default`: NotificationClearing = [.badge, .notifications, .openedThread]
-        /// Everything, including every thread when the app opens.
-        public static let all: NotificationClearing = [.badge, .notifications, .threads, .openedThread]
+        /// The default: a thread is cleared when one of its notifications is tapped, the
+        /// way Messages reads one conversation at a time. Opening the app clears nothing.
+        public static let `default`: NotificationClearing = [.tappedThread]
+        /// Everything: the tapped thread, and the badge and every notification when the
+        /// app opens.
+        public static let all: NotificationClearing = [
+            .tappedThread, .badge, .unthreaded, .threads,
+        ]
     }
 }

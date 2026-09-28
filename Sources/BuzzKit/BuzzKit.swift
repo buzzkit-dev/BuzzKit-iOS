@@ -30,7 +30,7 @@ public final class BuzzKit: @unchecked Sendable {
     let connectivity = ConnectivityMonitor()
     private let delegateState = LockedState<(any BuzzKitDelegate)?>(nil)
     private let identityWork = SerialWorkQueue()
-    
+
     #if canImport(UserNotifications)
     let notificationClearer: NotificationClearer
     private var coordinator: NotificationCoordinator?

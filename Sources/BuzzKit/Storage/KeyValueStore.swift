@@ -60,4 +60,5 @@ enum StorageKey {
     static let deviceTokenEnvironment = "deviceTokenEnvironment"
     static let permissionStatus = "permissionStatus"
     static let installedAt = "installedAt"
+    static let widgetId = "widgetId"
 }

@@ -134,6 +134,14 @@ BuzzKit.activities.enablePushToStart(for: MatchAttributes.self)
 
 Start, update and end Live Activities from the dashboard or API while the SDK handles their token lifecycle. Read more about [Live Activities](https://docs.buzzkit.dev/sdks/ios/live-activities).
 
+## Widget push updates
+
+```swift
+.pushHandler(StatsPushHandler.self)   // in the widget: hand the token to BuzzKit.widgets(appGroup:)
+```
+
+Reload widgets from your server with `buzzkit.widgets.reload({ to })` whenever their data changes, without the app running (iOS 26). Read more about [widget push updates](https://docs.buzzkit.dev/sdks/ios/widgets).
+
 ## Rich media and receipts
 
 Add a notification service extension target with one line of code:

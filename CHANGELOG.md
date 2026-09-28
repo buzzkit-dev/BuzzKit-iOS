@@ -2,16 +2,24 @@
 
 ## Unreleased
 
-- Opening the app now clears its notifications: at launch and on every return to the
-  foreground the badge resets to zero and every BuzzKit notification leaves Notification
-  Center, while notifications from other sources stay. Opening a notification sent with a
-  `threadId` removes the rest of that thread and leaves other threads in place.
-  `Configuration.automaticClearing` is an option set of `.badge`, `.notifications` and
-  `.openedThread`, defaulting to `.all`; `[]` turns it off
+- Automatic notification clearing, `Configuration.automaticClearing`. By default tapping
+  a notification sent with a `threadId` removes the rest of that thread and sets the badge
+  to the number of BuzzKit notifications left, while other threads and unthreaded
+  notifications stay, the way Messages reads one conversation at a time. Opening the app
+  clears nothing unless you add `.badge`, `.unthreaded` or
+  `.threads`; `.all` is every option and `[]` turns it off. Nothing is cleared
+  when iOS launches the app in the background. Notifications from other sources, the
+  app's own local notifications included, are never touched
 - Manual clearing: `BuzzKit.clearNotifications()`, `clearNotifications(inThread:)` for the
   notifications of one `threadId`, `clearNotifications(where:)` with a predicate over the
   parsed payload, and `clearBadge()`. `BuzzKit.activeNotifications()` lists the BuzzKit
   notifications still showing as `ActiveNotification` values, newest first
+
+- Widget push updates (iOS 26): `BuzzKit.widgets(appGroup:)` registers a widget
+  extension's WidgetKit push token from its `WidgetPushHandler`, so the server can reload
+  widgets with `buzzkit.widgets.reload({ to })` without the app running.
+  `pushTokenDidChange(_:widgets:)` registers while any widget is installed and unregisters
+  when the last one is removed; `synchronize()` re-registers from the app after `identify`
 
 ## 1.1.0 (2026-09-20)
 
