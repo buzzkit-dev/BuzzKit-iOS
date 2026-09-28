@@ -30,7 +30,9 @@ public final class BuzzKit: @unchecked Sendable {
     let connectivity = ConnectivityMonitor()
     private let delegateState = LockedState<(any BuzzKitDelegate)?>(nil)
     private let identityWork = SerialWorkQueue()
+    
     #if canImport(UserNotifications)
+    let notificationClearer: NotificationClearer
     private var coordinator: NotificationCoordinator?
     #endif
 
@@ -61,6 +63,13 @@ public final class BuzzKit: @unchecked Sendable {
         )
         self.deepLinkCenter = DeepLinkCenter(logger: logger)
         self.localScheduler = LocalScheduler(store: keyValue, logger: logger)
+        #if canImport(UserNotifications)
+        self.notificationClearer = NotificationClearer(
+            store: SystemActiveNotificationStore(),
+            policy: configuration.automaticClearing,
+            logger: logger
+        )
+        #endif
     }
 
     /// Configures the SDK with just an API key and the default options.
@@ -227,6 +236,41 @@ public final class BuzzKit: @unchecked Sendable {
     public static func notificationPermission() async -> UNAuthorizationStatus {
         await UNUserNotificationCenter.current().notificationSettings().authorizationStatus
     }
+
+    /// The BuzzKit notifications still showing in Notification Center, newest first.
+    /// Notifications from other sources are not included.
+    public static func activeNotifications() async -> [ActiveNotification] {
+        guard let instance = requireInstance() else { return [] }
+        return await instance.notificationClearer.active()
+    }
+
+    /// Removes every BuzzKit notification from Notification Center and resets the badge.
+    /// The automatic form of this is ``Configuration/automaticClearing``.
+    public static func clearNotifications() async {
+        guard let instance = requireInstance() else { return }
+        await instance.notificationClearer.clearAll()
+        await instance.notificationClearer.clearBadge()
+    }
+
+    /// Removes the delivered notifications sent with this `threadId`, for example when
+    /// the user opens the conversation they belong to. The badge is left alone.
+    public static func clearNotifications(inThread thread: String) async {
+        guard let instance = requireInstance() else { return }
+        await instance.notificationClearer.clear(inThread: thread)
+    }
+
+    /// Removes the delivered notifications the predicate matches, for example every one
+    /// whose custom data names an order the user just viewed. The badge is left alone.
+    public static func clearNotifications(where predicate: @Sendable (ActiveNotification) -> Bool) async {
+        guard let instance = requireInstance() else { return }
+        await instance.notificationClearer.clear(where: predicate)
+    }
+
+    /// Resets the app icon badge to zero without touching Notification Center.
+    public static func clearBadge() async {
+        guard let instance = requireInstance() else { return }
+        await instance.notificationClearer.clearBadge()
+    }
     #endif
 
     /// Forwards the APNs device token when app delegate swizzling is disabled.
@@ -295,6 +339,7 @@ public final class BuzzKit: @unchecked Sendable {
             }
             await drainSpillover()
             #if canImport(UserNotifications)
+            await notificationClearer.start()
             await pushManager.synchronizeOnLaunch()
             #endif
             await eventQueue.scheduleFlush(after: 5)
@@ -395,7 +440,19 @@ public final class BuzzKit: @unchecked Sendable {
         logger.info("Logged out to a fresh anonymous identity")
     }
 
-    func handleNotificationOpen(payload: PushPayload, actionIdentifier: String?, input: String? = nil) {
+    func handleNotificationOpen(
+        payload: PushPayload,
+        actionIdentifier: String?,
+        input: String? = nil,
+        threadId: String? = nil
+    ) {
+        #if canImport(UserNotifications)
+        let opensApp = actionIdentifier == nil
+            || payload.actions.contains { $0.id == actionIdentifier && $0.foreground }
+        if opensApp {
+            Task { await notificationClearer.notificationOpened(thread: threadId) }
+        }
+        #endif
         Task {
             var data: [String: JSONValue] = [:]
             if let messageId = payload.messageId { data["messageId"] = .string(messageId) }
@@ -455,8 +512,18 @@ public final class BuzzKit: @unchecked Sendable {
     /// harness can exercise open, action and dismiss handling without driving
     /// SpringBoard. Not API.
     @_spi(BuzzKitInternal)
-    public static func openNotification(payload: PushPayload, actionIdentifier: String? = nil, input: String? = nil) {
-        requireInstance()?.handleNotificationOpen(payload: payload, actionIdentifier: actionIdentifier, input: input)
+    public static func openNotification(
+        payload: PushPayload,
+        actionIdentifier: String? = nil,
+        input: String? = nil,
+        threadId: String? = nil
+    ) {
+        requireInstance()?.handleNotificationOpen(
+            payload: payload,
+            actionIdentifier: actionIdentifier,
+            input: input,
+            threadId: threadId
+        )
     }
 
     @_spi(BuzzKitInternal)

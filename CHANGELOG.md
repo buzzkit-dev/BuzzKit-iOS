@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+- Opening the app now clears its notifications: at launch and on every return to the
+  foreground the badge resets to zero and every BuzzKit notification leaves Notification
+  Center, while notifications from other sources stay. Opening a notification sent with a
+  `threadId` removes the rest of that thread and leaves other threads in place.
+  `Configuration.automaticClearing` is an option set of `.badge`, `.notifications` and
+  `.openedThread`, defaulting to `.all`; `[]` turns it off
+- Manual clearing: `BuzzKit.clearNotifications()`, `clearNotifications(inThread:)` for the
+  notifications of one `threadId`, `clearNotifications(where:)` with a predicate over the
+  parsed payload, and `clearBadge()`. `BuzzKit.activeNotifications()` lists the BuzzKit
+  notifications still showing as `ActiveNotification` values, newest first
+
 ## 1.1.0 (2026-09-20)
 
 - Live Activity and push-to-start token registration failures are now logged instead of

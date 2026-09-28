@@ -39,6 +39,7 @@ struct GymApp: App {
 | `appGroup` | `nil` | Shared with the notification service extension for receipts |
 | `pushEnvironment` | detected | Force `sandbox` or `production` |
 | `automaticPushHandling` | `true` | Hooks the app delegate's push callbacks |
+| `automaticClearing` | `.default` | What is cleared on its own: `.tappedThread` (a tapped notification's thread, then the badge counts what is left); add `.badge`, `.unthreaded`, `.threads`, or use `.all`; `[]` for nothing |
 
 ## 4. Xcode capabilities
 

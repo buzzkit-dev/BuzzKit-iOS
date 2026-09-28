@@ -49,6 +49,42 @@ The SDK installs itself as the notification center delegate and forwards everyth
 any delegate your app had installed first — both for its own pushes and for pushes from
 other sources, which it never touches.
 
+## Clearing notifications and the badge
+
+Tapping a notification reads its conversation. By default, when the user taps a
+notification sent with a `threadId`, the rest of that thread leaves Notification Center
+and the badge becomes the number of BuzzKit notifications still showing; other threads
+and notifications without a thread stay (iOS removes the tapped one itself). Opening the
+app on its own clears nothing, the way Messages behaves. iOS never lets an app touch
+another app's notifications, and the SDK only removes the ones it delivered, so the
+app's own local notifications stay.
+
+`automaticClearing` is an option set:
+
+| Option | When | Clears |
+| --- | --- | --- |
+| `.tappedThread` | A threaded notification is tapped | The rest of that thread, then the badge counts what is left |
+| `.badge` | The app opens | The badge |
+| `.unthreaded` | The app opens | Notifications sent without a `threadId` |
+| `.threads` | The app opens | Every thread's notifications |
+
+`.default` is `[.tappedThread]`, `.all` is all four, `[]` turns it off. Nothing is cleared
+when iOS launches the app in the background; the app-open options run once the user opens
+it.
+
+```swift
+await BuzzKit.clearNotifications()
+await BuzzKit.clearNotifications(inThread: "room:12")
+await BuzzKit.clearNotifications { $0.payload.data["orderId"] == .string("o_1") }
+await BuzzKit.clearBadge()
+let showing = await BuzzKit.activeNotifications()
+```
+
+`clearNotifications()` removes everything and resets the badge. The thread and predicate
+forms remove only what they match and leave the badge alone, since only the app knows
+what the remaining count should be. `activeNotifications()` lists what is still
+showing, newest first, with title, body, thread and the parsed `PushPayload`.
+
 ## Manual delegate forwarding
 
 With `automaticPushHandling: false`, forward the three app delegate callbacks:

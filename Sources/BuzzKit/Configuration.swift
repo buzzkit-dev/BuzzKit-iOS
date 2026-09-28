@@ -40,6 +40,17 @@ extension BuzzKit {
         /// ``BuzzKit/didReceiveRemoteNotification(userInfo:)``.
         public var automaticPushHandling: Bool
 
+        /// What the SDK clears on its own. Defaults to ``NotificationClearing/default``:
+        /// tapping a notification sent with a `threadId` removes the rest of that thread and
+        /// sets the badge to the number of notifications left, the way Messages reads one
+        /// conversation at a time. Opening the app clears nothing; add
+        /// ``NotificationClearing/badge``, ``NotificationClearing/unthreaded``
+        /// or ``NotificationClearing/threads`` for that, or use
+        /// ``NotificationClearing/all``. `[]` clears nothing, leaving it to
+        /// ``BuzzKit/clearNotifications()``, ``BuzzKit/clearNotifications(inThread:)``
+        /// and ``BuzzKit/clearBadge()``.
+        public var automaticClearing: NotificationClearing
+
         public init(
             apiKey: String,
             apiURL: URL = URL(string: "https://api.buzzkit.dev")!,
@@ -48,7 +59,8 @@ extension BuzzKit {
             automaticSessionTracking: Bool = true,
             appGroup: String? = nil,
             pushEnvironment: BuzzKit.PushEnvironment? = nil,
-            automaticPushHandling: Bool = true
+            automaticPushHandling: Bool = true,
+            automaticClearing: NotificationClearing = .default
         ) {
             self.apiKey = apiKey
             self.apiURL = apiURL
@@ -58,6 +70,7 @@ extension BuzzKit {
             self.appGroup = appGroup
             self.pushEnvironment = pushEnvironment
             self.automaticPushHandling = automaticPushHandling
+            self.automaticClearing = automaticClearing
         }
     }
 

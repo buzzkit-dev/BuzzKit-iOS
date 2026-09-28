@@ -78,7 +78,13 @@ final class NotificationCoordinator: NSObject, UNUserNotificationCenterDelegate,
             ? nil
             : response.actionIdentifier
         let input = (response as? UNTextInputNotificationResponse)?.userText
-        sdk.handleNotificationOpen(payload: payload, actionIdentifier: actionIdentifier, input: input)
+        let thread = response.notification.request.content.threadIdentifier
+        sdk.handleNotificationOpen(
+            payload: payload,
+            actionIdentifier: actionIdentifier,
+            input: input,
+            threadId: thread.isEmpty ? nil : thread
+        )
         if let forwardee = forwardee.read(),
             forwardee.responds(to: #selector(UNUserNotificationCenterDelegate.userNotificationCenter(_:didReceive:withCompletionHandler:))) {
             forwardee.userNotificationCenter?(center, didReceive: response, withCompletionHandler: completionHandler)
