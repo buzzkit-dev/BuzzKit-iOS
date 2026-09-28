@@ -53,7 +53,7 @@ Once configured, the SDK keeps each user, device and preference in sync while yo
 Add the package in Xcode (File → Add Package Dependencies) or in `Package.swift`:
 
 ```swift
-.package(url: "https://github.com/buzzkit-dev/buzzkit-ios", from: "1.1.0")
+.package(url: "https://github.com/buzzkit-dev/buzzkit-ios", from: "1.2.0")
 ```
 
 The package provides three products:

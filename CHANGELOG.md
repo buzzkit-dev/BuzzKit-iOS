@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 1.2.0 (2026-09-28)
+
 - Automatic notification clearing, `Configuration.automaticClearing`. By default tapping
   a notification sent with a `threadId` removes the rest of that thread and sets the badge
   to the number of BuzzKit notifications left, while other threads and unthreaded
