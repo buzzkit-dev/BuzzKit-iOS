@@ -31,7 +31,7 @@ jobs:
     timeout-minutes: 45
     env:
       E2E_SIMULATOR: ${{ inputs.simulator || 'BuzzKit E2E' }}
-      DEVELOPER_DIR: /Applications/Xcode-27.app
+      DEVELOPER_DIR: /Applications/Xcode-27.2.0-Beta.app
     steps:
       - uses: actions/checkout@v4
         with:
