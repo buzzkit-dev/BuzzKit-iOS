@@ -54,4 +54,76 @@ import Testing
     @Test func identityThrowsBeforeTheAppHasConfiguredBuzzKit() {
         #expect(throws: BuzzKitError.self) { try BuzzKit.Widgets.identity(in: store()) }
     }
+
+    private func extensionWidgets(_ mock: MockAPI, signedIn: Bool = true) -> (BuzzKit.Widgets, KeyValueStore) {
+        let group = "buzzkit-widgets-group-\(UUID().uuidString)"
+        let shared = KeyValueStore(appGroup: group)
+        shared.set(mock.key, for: SharedConfigurationKey.apiKey)
+        shared.set("https://api.test.buzzkit.dev", for: SharedConfigurationKey.apiURL)
+        shared.set("anon_1", for: StorageKey.anonymousId)
+        if signedIn {
+            shared.set("user_1", for: StorageKey.externalId)
+            shared.set("hash", for: StorageKey.identityHash)
+        }
+        var widgets = BuzzKit.widgets(appGroup: group)
+        widgets.makeSession = {
+            let configuration = URLSessionConfiguration.ephemeral
+            configuration.protocolClasses = [MockURLProtocol.self]
+            return URLSession(configuration: configuration)
+        }
+        return (widgets, shared)
+    }
+
+    @Test func theExtensionRegistersThroughTheAppGroupAndRemembersTheRegistration() async throws {
+        let mock = MockAPI()
+        mock.stub { _ in jsonResponse(201, #"{"success":true,"data":{"id":"wgt_9","environment":"production"}}"#) }
+        let (widgets, shared) = extensionWidgets(mock)
+
+        try await widgets.register(token: Data([0xAB, 0x01]))
+
+        let request = try #require(mock.requests().first)
+        #expect(request.url?.path == "/v1/client/widgets")
+        let body = try JSONSerialization.jsonObject(with: bodyData(of: request)) as? [String: Any]
+        #expect(body?["token"] as? String == "ab01")
+        #expect(body?["externalId"] as? String == "user_1")
+        #expect(body?["identityHash"] as? String == "hash")
+        #expect(shared.string(StorageKey.widgetId) == "wgt_9")
+    }
+
+    @Test func unregisteringDeletesTheRememberedRegistrationOnce() async throws {
+        let mock = MockAPI()
+        mock.stub { _ in jsonResponse(200, #"{"success":true,"data":{"id":"wgt_9","environment":"production"}}"#) }
+        let (widgets, shared) = extensionWidgets(mock)
+        shared.set("wgt_9", for: StorageKey.widgetId)
+
+        try await widgets.unregister()
+        try await widgets.unregister()
+
+        #expect(mock.requests().map { "\($0.httpMethod ?? "") \($0.url?.path ?? "")" } == ["DELETE /v1/client/widgets/wgt_9"])
+        #expect(shared.string(StorageKey.widgetId) == nil)
+    }
+
+    @Test func aTokenChangeRegistersWhileWidgetsAreInstalledAndUnregistersWhenNoneAre() async throws {
+        let mock = MockAPI()
+        mock.stub { _ in jsonResponse(200, #"{"success":true,"data":{"id":"wgt_3","environment":"production"}}"#) }
+        let (widgets, _) = extensionWidgets(mock, signedIn: false)
+
+        try await widgets.update(token: Data([0x01]), installed: true)
+        try await widgets.update(token: Data([0x01]), installed: false)
+
+        let requests = mock.requests()
+        #expect(requests.map { "\($0.httpMethod ?? "") \($0.url?.path ?? "")" } == [
+            "POST /v1/client/widgets",
+            "DELETE /v1/client/widgets/wgt_3",
+        ])
+        let body = try JSONSerialization.jsonObject(with: bodyData(of: requests[0])) as? [String: Any]
+        #expect(body?["externalId"] as? String == "anon_1")
+        #expect(requests[1].value(forHTTPHeaderField: "BuzzKit-Identity") == nil)
+    }
+
+    @Test func theExtensionRefusesBeforeTheAppSharedItsConfiguration() async {
+        let widgets = BuzzKit.widgets(appGroup: "buzzkit-widgets-empty-\(UUID().uuidString)")
+        await #expect(throws: BuzzKitError.self) { try await widgets.register(token: Data([0x01])) }
+    }
 }
+

@@ -12,6 +12,11 @@ extension BuzzKit {
     /// the app configured with `Configuration.appGroup`.
     public struct Widgets: Sendable {
         let appGroup: String?
+        var makeSession: @Sendable () -> URLSession = {
+            let configuration = URLSessionConfiguration.ephemeral
+            configuration.timeoutIntervalForRequest = 15
+            return URLSession(configuration: configuration)
+        }
 
         /// Registers this device's widget push token for the current subscriber. Call it
         /// again whenever the token changes; registration is idempotent.
@@ -36,6 +41,14 @@ extension BuzzKit {
             context.store.set(nil as String?, for: StorageKey.widgetId)
         }
 
+        func update(token: Data, installed: Bool) async throws {
+            if installed {
+                try await register(token: token)
+            } else {
+                try await unregister()
+            }
+        }
+
         private func resolveContext() throws -> WidgetContext {
             if let sdk = BuzzKit.instanceIfConfigured, sdk.configuration.appGroup == appGroup || appGroup == nil {
                 let store = KeyValueStore(appGroup: sdk.configuration.appGroup)
@@ -53,13 +66,11 @@ extension BuzzKit {
             else {
                 throw BuzzKitError.notConfigured
             }
-            let configuration = URLSessionConfiguration.ephemeral
-            configuration.timeoutIntervalForRequest = 15
             let http = HTTPClient(
                 baseURL: apiURL,
                 apiKey: apiKey,
                 logger: BKLogger(level: .none),
-                session: URLSession(configuration: configuration),
+                session: makeSession(),
                 maxAttempts: 2
             )
             return WidgetContext(
@@ -98,11 +109,7 @@ extension BuzzKit.Widgets {
     /// any of your widgets is installed and unregisters when the last one is removed.
     public func pushTokenDidChange(_ pushInfo: WidgetPushInfo, widgets: [WidgetInfo]) async {
         do {
-            if widgets.isEmpty {
-                try await unregister()
-            } else {
-                try await register(token: pushInfo.token)
-            }
+            try await update(token: pushInfo.token, installed: !widgets.isEmpty)
         } catch {
             BKLogger(level: .warn).warn("Widget push registration failed: \(error)")
         }
